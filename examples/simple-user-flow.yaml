@@ -1,0 +1,230 @@
+id: "simple_user_flow"
+name: "Simple User Registration Flow"
+description: "A basic example showing user registration process"
+version: "1.0.0"
+tags:
+  - "example"
+  - "user-management"
+  - "registration"
+
+metadata:
+  author: "Michael Lanpart"
+  department: "Engineering"
+  created: "2024-01-15"
+  lastModified: "2024-01-15"
+
+nodes:
+  - id: "start"
+    name: "Start"
+    description: "User initiates registration"
+    type: "start"
+    position:
+      x: 100
+      y: 50
+    dimensions:
+      width: 80
+      height: 40
+    style:
+      fill: "#27ae60"
+      stroke: "#229954"
+
+  - id: "enter_email"
+    name: "Enter Email"
+    description: "User provides email address"
+    type: "process"
+    position:
+      x: 50
+      y: 150
+    dimensions:
+      width: 140
+      height: 60
+    style:
+      fill: "#3498db"
+      stroke: "#2980b9"
+
+  - id: "validate_email"
+    name: "Valid Email?"
+    description: "Check if email format is valid"
+    type: "decision"
+    position:
+      x: 75
+      y: 250
+    dimensions:
+      width: 90
+      height: 60
+    style:
+      fill: "#f39c12"
+      stroke: "#e67e22"
+
+  - id: "check_existing"
+    name: "Check Existing User"
+    description: "Verify if email already exists"
+    type: "process"
+    position:
+      x: 50
+      y: 350
+    dimensions:
+      width: 140
+      height: 60
+
+  - id: "user_exists"
+    name: "User Exists?"
+    description: "User already registered?"
+    type: "decision"
+    position:
+      x: 75
+      y: 450
+    dimensions:
+      width: 90
+      height: 60
+
+  - id: "create_account"
+    name: "Create Account"
+    description: "Create new user account"
+    type: "process"
+    position:
+      x: 50
+      y: 550
+    dimensions:
+      width: 140
+      height: 60
+    drillDown: "account_creation_detail"
+
+  - id: "send_confirmation"
+    name: "Send Confirmation"
+    description: "Send email confirmation"
+    type: "process"
+    position:
+      x: 50
+      y: 650
+    dimensions:
+      width: 140
+      height: 60
+    integrations:
+      jira:
+        projectKey: "USER"
+        issueKey: "USER-123"
+
+  - id: "show_error"
+    name: "Show Error"
+    description: "Display error message"
+    type: "process"
+    position:
+      x: 250
+      y: 350
+    dimensions:
+      width: 120
+      height: 60
+    style:
+      fill: "#e74c3c"
+      stroke: "#c0392b"
+
+  - id: "end_success"
+    name: "Success"
+    description: "Registration completed"
+    type: "end"
+    position:
+      x: 100
+      y: 750
+    dimensions:
+      width: 80
+      height: 40
+    style:
+      fill: "#27ae60"
+      stroke: "#229954"
+
+  - id: "end_error"
+    name: "Error"
+    description: "Registration failed"
+    type: "end"
+    position:
+      x: 290
+      y: 450
+    dimensions:
+      width: 80
+      height: 40
+    style:
+      fill: "#e74c3c"
+      stroke: "#c0392b"
+
+edges:
+  - id: "start_to_email"
+    name: "Begin"
+    type: "sequence"
+    from: "start"
+    to: "enter_email"
+
+  - id: "email_to_validate"
+    name: "Submit"
+    type: "sequence"
+    from: "enter_email"
+    to: "validate_email"
+
+  - id: "validate_success"
+    name: "Valid"
+    type: "conditional"
+    from: "validate_email"
+    to: "check_existing"
+    condition: "email.isValid() === true"
+
+  - id: "validate_failure"
+    name: "Invalid"
+    type: "conditional"
+    from: "validate_email"
+    to: "show_error"
+    condition: "email.isValid() === false"
+    style:
+      stroke: "#e74c3c"
+      strokeDasharray: "5,5"
+
+  - id: "check_to_exists"
+    name: "Query"
+    type: "data_flow"
+    from: "check_existing"
+    to: "user_exists"
+    style:
+      stroke: "#1abc9c"
+      strokeDasharray: "3,3"
+
+  - id: "exists_no"
+    name: "New User"
+    type: "conditional"
+    from: "user_exists"
+    to: "create_account"
+    condition: "user.exists === false"
+
+  - id: "exists_yes"
+    name: "Existing User"
+    type: "conditional"
+    from: "user_exists"
+    to: "show_error"
+    condition: "user.exists === true"
+    style:
+      stroke: "#e74c3c"
+      strokeDasharray: "5,5"
+
+  - id: "create_to_confirm"
+    name: "Account Created"
+    type: "sequence"
+    from: "create_account"
+    to: "send_confirmation"
+
+  - id: "confirm_to_success"
+    name: "Email Sent"
+    type: "sequence"
+    from: "send_confirmation"
+    to: "end_success"
+
+  - id: "error_to_end"
+    name: "Failed"
+    type: "sequence"
+    from: "show_error"
+    to: "end_error"
+    style:
+      stroke: "#e74c3c"
+
+layout:
+  direction: "top-bottom"
+  spacing:
+    node: 50
+    rank: 100

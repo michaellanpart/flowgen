@@ -1,0 +1,165 @@
+id: "account_creation_detail"
+name: "Account Creation Detail"
+description: "Detailed view of account creation process"
+version: "1.0.0"
+parent: "simple_user_flow"
+tags:
+  - "detailed"
+  - "account-creation"
+  - "drill-down"
+
+metadata:
+  author: "Michael Lanpart"
+  department: "Engineering"
+  level: "detailed"
+
+nodes:
+  - id: "start_creation"
+    name: "Start Creation"
+    type: "start"
+    position:
+      x: 100
+      y: 50
+    dimensions:
+      width: 80
+      height: 40
+
+  - id: "generate_id"
+    name: "Generate User ID"
+    description: "Create unique user identifier"
+    type: "process"
+    position:
+      x: 50
+      y: 150
+    dimensions:
+      width: 140
+      height: 60
+
+  - id: "hash_password"
+    name: "Hash Password"
+    description: "Securely hash user password"
+    type: "process"
+    position:
+      x: 250
+      y: 150
+    dimensions:
+      width: 140
+      height: 60
+
+  - id: "create_profile"
+    name: "Create Profile"
+    description: "Initialize user profile"
+    type: "process"
+    position:
+      x: 50
+      y: 250
+    dimensions:
+      width: 140
+      height: 60
+
+  - id: "save_database"
+    name: "Save to Database"
+    description: "Persist user data"
+    type: "data"
+    position:
+      x: 250
+      y: 250
+    dimensions:
+      width: 140
+      height: 60
+    style:
+      fill: "#1abc9c"
+      stroke: "#16a085"
+
+  - id: "create_session"
+    name: "Create Session"
+    description: "Initialize user session"
+    type: "process"
+    position:
+      x: 150
+      y: 350
+    dimensions:
+      width: 140
+      height: 60
+
+  - id: "log_creation"
+    name: "Log Event"
+    description: "Record account creation"
+    type: "external"
+    position:
+      x: 150
+      y: 450
+    dimensions:
+      width: 140
+      height: 60
+    style:
+      fill: "#95a5a6"
+      stroke: "#7f8c8d"
+
+  - id: "end_creation"
+    name: "Account Created"
+    type: "end"
+    position:
+      x: 175
+      y: 550
+    dimensions:
+      width: 90
+      height: 40
+
+edges:
+  - id: "start_to_id"
+    name: "Initialize"
+    type: "sequence"
+    from: "start_creation"
+    to: "generate_id"
+
+  - id: "start_to_hash"
+    name: "Process Password"
+    type: "sequence"
+    from: "start_creation"
+    to: "hash_password"
+
+  - id: "id_to_profile"
+    name: "ID Generated"
+    type: "sequence"
+    from: "generate_id"
+    to: "create_profile"
+
+  - id: "hash_to_save"
+    name: "Password Ready"
+    type: "sequence"
+    from: "hash_password"
+    to: "save_database"
+
+  - id: "profile_to_session"
+    name: "Profile Created"
+    type: "sequence"
+    from: "create_profile"
+    to: "create_session"
+
+  - id: "save_to_session"
+    name: "Data Saved"
+    type: "data_flow"
+    from: "save_database"
+    to: "create_session"
+    style:
+      stroke: "#1abc9c"
+      strokeDasharray: "3,3"
+
+  - id: "session_to_log"
+    name: "Session Active"
+    type: "sequence"
+    from: "create_session"
+    to: "log_creation"
+
+  - id: "log_to_end"
+    name: "Complete"
+    type: "sequence"
+    from: "log_creation"
+    to: "end_creation"
+
+layout:
+  direction: "top-bottom"
+  spacing:
+    node: 50
+    rank: 100

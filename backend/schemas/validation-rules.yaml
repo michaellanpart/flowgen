@@ -1,0 +1,139 @@
+# FlowGen Schema Validation Rules
+# Additional validation rules and constraints beyond basic schema validation
+
+validation_rules:
+  diagram:
+    # Business logic constraints
+    constraints:
+      - rule: "unique_ids"
+        description: "All IDs within a diagram must be unique"
+        applies_to: ["nodes", "edges"]
+        
+      - rule: "valid_references"
+        description: "Edge from/to must reference existing node IDs"
+        applies_to: ["edges"]
+        
+      - rule: "no_self_loops"
+        description: "Edges cannot connect a node to itself"
+        applies_to: ["edges"]
+        severity: "warning"
+        
+      - rule: "reachability"
+        description: "All nodes should be reachable from start nodes"
+        applies_to: ["nodes"]
+        severity: "warning"
+        
+      - rule: "end_nodes"
+        description: "Flow should have at least one end node"
+        applies_to: ["nodes"]
+        severity: "warning"
+
+  hierarchy:
+    constraints:
+      - rule: "no_circular_references"
+        description: "Parent-child relationships cannot form cycles"
+        applies_to: ["parent", "children"]
+        
+      - rule: "valid_drill_down"
+        description: "DrillDown references must point to existing child diagrams"
+        applies_to: ["nodes.drillDown"]
+
+  integrations:
+    jira:
+      constraints:
+        - rule: "valid_issue_format"
+          description: "Jira issue keys must follow PROJECT-NUMBER format"
+          pattern: "^[A-Z]+-\\d+$"
+          
+        - rule: "valid_project_format"
+          description: "Jira project keys must be uppercase letters only"
+          pattern: "^[A-Z]+$"
+
+semantic_rules:
+  # Rules that go beyond syntax to check logical consistency
+  flow_logic:
+    - rule: "decision_branches"
+      description: "Decision nodes should have multiple outgoing edges"
+      node_types: ["decision"]
+      min_outgoing_edges: 2
+      
+    - rule: "start_node_placement"
+      description: "Start nodes should not have incoming edges"
+      node_types: ["start"]
+      max_incoming_edges: 0
+      
+    - rule: "end_node_placement"
+      description: "End nodes should not have outgoing edges"
+      node_types: ["end"]
+      max_outgoing_edges: 0
+      
+    - rule: "subprocess_drill_down"
+      description: "Subprocess nodes should have drill-down references"
+      node_types: ["subprocess"]
+      requires: ["drillDown"]
+      severity: "warning"
+
+best_practices:
+  # Recommendations for better diagram design
+  naming:
+    - rule: "descriptive_names"
+      description: "Names should be descriptive and not just IDs"
+      min_length: 3
+      severity: "info"
+      
+    - rule: "consistent_naming"
+      description: "Use consistent naming conventions"
+      recommendations:
+        - "Use verb phrases for process nodes"
+        - "Use questions for decision nodes"
+        - "Use nouns for data nodes"
+
+  layout:
+    - rule: "reasonable_spacing"
+      description: "Nodes should have reasonable spacing"
+      min_distance: 20
+      recommended_distance: 50
+      severity: "info"
+      
+    - rule: "alignment"
+      description: "Nodes should be reasonably aligned"
+      tolerance: 10
+      severity: "info"
+
+validation_levels:
+  strict:
+    description: "Enforce all rules including warnings"
+    includes: ["constraints", "semantic_rules", "best_practices"]
+    
+  standard:
+    description: "Enforce constraints and semantic rules"
+    includes: ["constraints", "semantic_rules"]
+    
+  basic:
+    description: "Only enforce schema and critical constraints"
+    includes: ["schema", "constraints.severity:error"]
+
+error_codes:
+  # Standardized error codes for consistent error handling
+  schema:
+    SCHEMA_001: "Required field missing"
+    SCHEMA_002: "Invalid field type"
+    SCHEMA_003: "Value out of range"
+    SCHEMA_004: "Invalid format"
+    
+  constraints:
+    CONST_001: "Duplicate ID found"
+    CONST_002: "Invalid node reference"
+    CONST_003: "Self-referencing edge"
+    CONST_004: "Unreachable node"
+    CONST_005: "Missing end node"
+    
+  hierarchy:
+    HIER_001: "Circular parent-child reference"
+    HIER_002: "Invalid drill-down reference"
+    
+  semantic:
+    SEM_001: "Decision node with single branch"
+    SEM_002: "Start node with incoming edges"
+    SEM_003: "End node with outgoing edges"
+    SEM_004: "Subprocess without drill-down"

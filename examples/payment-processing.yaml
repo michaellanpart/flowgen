@@ -1,0 +1,269 @@
+id: "payment_processing"
+name: "Payment Processing System"
+description: "Enterprise payment processing workflow with multiple integrations"
+version: "2.1.0"
+tags:
+  - "payment"
+  - "enterprise"
+  - "pci-compliant"
+  - "critical"
+
+metadata:
+  author: "Payment Team"
+  department: "Financial Technology"
+  compliance: "PCI DSS Level 1"
+  criticality: "high"
+  lastAudit: "2024-01-10"
+
+nodes:
+  - id: "payment_start"
+    name: "Payment Request"
+    description: "Customer initiates payment"
+    type: "start"
+    position:
+      x: 150
+      y: 50
+    dimensions:
+      width: 100
+      height: 50
+
+  - id: "validate_amount"
+    name: "Validate Amount"
+    description: "Check payment amount limits"
+    type: "decision"
+    position:
+      x: 125
+      y: 150
+    dimensions:
+      width: 100
+      height: 70
+    integrations:
+      jira:
+        projectKey: "PAY"
+        issueKey: "PAY-456"
+
+  - id: "fraud_check"
+    name: "Fraud Detection"
+    description: "Run fraud analysis algorithms"
+    type: "subprocess"
+    position:
+      x: 50
+      y: 280
+    dimensions:
+      width: 120
+      height: 60
+    drillDown: "fraud_detection_detail"
+    style:
+      fill: "#9b59b6"
+      stroke: "#8e44ad"
+
+  - id: "payment_gateway"
+    name: "Payment Gateway"
+    description: "Process via external gateway"
+    type: "external"
+    position:
+      x: 200
+      y: 280
+    dimensions:
+      width: 120
+      height: 60
+
+  - id: "bank_processing"
+    name: "Bank Processing"
+    description: "Send to acquiring bank"
+    type: "external"
+    position:
+      x: 350
+      y: 280
+    dimensions:
+      width: 120
+      height: 60
+
+  - id: "response_processing"
+    name: "Process Response"
+    description: "Handle bank response"
+    type: "process"
+    position:
+      x: 275
+      y: 400
+    dimensions:
+      width: 120
+      height: 60
+
+  - id: "success_check"
+    name: "Payment Success?"
+    description: "Check transaction result"
+    type: "decision"
+    position:
+      x: 300
+      y: 520
+    dimensions:
+      width: 90
+      height: 70
+
+  - id: "update_ledger"
+    name: "Update Ledger"
+    description: "Record successful transaction"
+    type: "data"
+    position:
+      x: 150
+      y: 650
+    dimensions:
+      width: 120
+      height: 60
+
+  - id: "send_receipt"
+    name: "Send Receipt"
+    description: "Email receipt to customer"
+    type: "process"
+    position:
+      x: 300
+      y: 650
+    dimensions:
+      width: 120
+      height: 60
+
+  - id: "handle_failure"
+    name: "Handle Failure"
+    description: "Process failed payment"
+    type: "process"
+    position:
+      x: 450
+      y: 650
+    dimensions:
+      width: 120
+      height: 60
+    style:
+      fill: "#e74c3c"
+      stroke: "#c0392b"
+
+  - id: "notify_customer"
+    name: "Notify Customer"
+    description: "Send result notification"
+    type: "process"
+    position:
+      x: 275
+      y: 780
+    dimensions:
+      width: 120
+      height: 60
+
+  - id: "payment_complete"
+    name: "Complete"
+    type: "end"
+    position:
+      x: 300
+      y: 900
+    dimensions:
+      width: 80
+      height: 40
+
+  - id: "amount_rejected"
+    name: "Amount Rejected"
+    type: "end"
+    position:
+      x: 450
+      y: 150
+    dimensions:
+      width: 90
+      height: 40
+    style:
+      fill: "#e74c3c"
+
+edges:
+  - id: "start_to_validate"
+    name: "Request"
+    type: "sequence"
+    from: "payment_start"
+    to: "validate_amount"
+
+  - id: "amount_valid"
+    name: "Valid Amount"
+    type: "conditional"
+    from: "validate_amount"
+    to: "fraud_check"
+    condition: "amount <= limits.max && amount >= limits.min"
+
+  - id: "amount_invalid"
+    name: "Invalid Amount"
+    type: "conditional"
+    from: "validate_amount"
+    to: "amount_rejected"
+    condition: "amount > limits.max || amount < limits.min"
+    style:
+      stroke: "#e74c3c"
+      strokeDasharray: "5,5"
+
+  - id: "fraud_to_gateway"
+    name: "Fraud Clear"
+    type: "sequence"
+    from: "fraud_check"
+    to: "payment_gateway"
+
+  - id: "gateway_to_bank"
+    name: "Route to Bank"
+    type: "sequence"
+    from: "payment_gateway"
+    to: "bank_processing"
+
+  - id: "bank_to_response"
+    name: "Bank Response"
+    type: "data_flow"
+    from: "bank_processing"
+    to: "response_processing"
+    style:
+      stroke: "#1abc9c"
+      strokeDasharray: "3,3"
+
+  - id: "response_to_check"
+    name: "Analyze"
+    type: "sequence"
+    from: "response_processing"
+    to: "success_check"
+
+  - id: "success_to_ledger"
+    name: "Success"
+    type: "conditional"
+    from: "success_check"
+    to: "update_ledger"
+    condition: "response.status === 'approved'"
+
+  - id: "success_to_receipt"
+    name: "Send Receipt"
+    type: "sequence"
+    from: "update_ledger"
+    to: "send_receipt"
+
+  - id: "failure_path"
+    name: "Failure"
+    type: "conditional"
+    from: "success_check"
+    to: "handle_failure"
+    condition: "response.status !== 'approved'"
+    style:
+      stroke: "#e74c3c"
+      strokeDasharray: "5,5"
+
+  - id: "receipt_to_notify"
+    name: "Receipt Sent"
+    type: "sequence"
+    from: "send_receipt"
+    to: "notify_customer"
+
+  - id: "failure_to_notify"
+    name: "Failure Handled"
+    type: "sequence"
+    from: "handle_failure"
+    to: "notify_customer"
+
+  - id: "notify_to_complete"
+    name: "Customer Notified"
+    type: "sequence"
+    from: "notify_customer"
+    to: "payment_complete"
+
+layout:
+  direction: "top-bottom"
+  spacing:
+    node: 60
+    rank: 120

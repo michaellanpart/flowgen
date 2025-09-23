@@ -1,0 +1,385 @@
+# FlowGen YAML Schema Definition
+# This file defines the structure and validation rules for FlowGen diagrams
+
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://flowgen.dev/schemas/diagram.yaml"
+title: "FlowGen Diagram Schema"
+description: "Schema for FlowGen YAML flow diagrams"
+type: object
+
+required:
+  - id
+  - name
+  - version
+  - nodes
+  - edges
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-zA-Z][a-zA-Z0-9_-]*$"
+    description: "Unique identifier for the diagram"
+    examples:
+      - "user_registration_flow"
+      - "payment_process"
+
+  name:
+    type: string
+    minLength: 1
+    maxLength: 100
+    description: "Human-readable name for the diagram"
+    examples:
+      - "User Registration Flow"
+      - "Payment Processing System"
+
+  description:
+    type: string
+    maxLength: 1000
+    description: "Optional description of the diagram"
+
+  version:
+    type: string
+    pattern: "^\\d+\\.\\d+\\.\\d+$"
+    description: "Semantic version of the diagram"
+    examples:
+      - "1.0.0"
+      - "2.1.3"
+
+  metadata:
+    type: object
+    description: "Additional metadata for the diagram"
+    properties:
+      author:
+        type: string
+      department:
+        type: string
+      lastModified:
+        type: string
+        format: date-time
+      approvers:
+        type: array
+        items:
+          type: string
+    additionalProperties: true
+
+  tags:
+    type: array
+    items:
+      type: string
+      pattern: "^[a-zA-Z0-9_-]+$"
+    uniqueItems: true
+    description: "Tags for categorizing and searching diagrams"
+    examples:
+      - ["authentication", "user-flow"]
+      - ["payment", "critical", "pci-compliant"]
+
+  nodes:
+    type: array
+    minItems: 1
+    items:
+      $ref: "#/definitions/Node"
+    description: "Array of nodes in the diagram"
+
+  edges:
+    type: array
+    items:
+      $ref: "#/definitions/Edge"
+    description: "Array of edges connecting nodes"
+
+  layout:
+    type: object
+    properties:
+      direction:
+        type: string
+        enum: ["top-bottom", "bottom-top", "left-right", "right-left"]
+        default: "top-bottom"
+        description: "Layout direction for automatic positioning"
+      
+      spacing:
+        type: object
+        properties:
+          node:
+            type: number
+            minimum: 0
+            default: 50
+            description: "Spacing between nodes"
+          rank:
+            type: number
+            minimum: 0
+            default: 100
+            description: "Spacing between ranks/levels"
+        additionalProperties: false
+    additionalProperties: false
+
+  parent:
+    type: string
+    description: "ID of parent diagram for hierarchical relationships"
+
+  children:
+    type: array
+    items:
+      type: string
+    uniqueItems: true
+    description: "Array of child diagram IDs"
+
+definitions:
+  Node:
+    type: object
+    required:
+      - id
+      - name
+      - type
+      - position
+    properties:
+      id:
+        type: string
+        pattern: "^[a-zA-Z][a-zA-Z0-9_-]*$"
+        description: "Unique identifier for the node"
+
+      name:
+        type: string
+        minLength: 1
+        maxLength: 100
+        description: "Display name for the node"
+
+      description:
+        type: string
+        maxLength: 500
+        description: "Optional description of the node"
+
+      type:
+        type: string
+        enum: ["process", "decision", "start", "end", "subprocess", "data", "external", "custom"]
+        description: "Type of node determining its visual representation and behavior"
+
+      position:
+        type: object
+        required: ["x", "y"]
+        properties:
+          x:
+            type: number
+            description: "X coordinate of the node"
+          y:
+            type: number
+            description: "Y coordinate of the node"
+        additionalProperties: false
+
+      dimensions:
+        type: object
+        required: ["width", "height"]
+        properties:
+          width:
+            type: number
+            minimum: 1
+            description: "Width of the node"
+          height:
+            type: number
+            minimum: 1
+            description: "Height of the node"
+        additionalProperties: false
+
+      style:
+        $ref: "#/definitions/Style"
+
+      drillDown:
+        type: string
+        description: "ID of child diagram for drill-down functionality"
+
+      metadata:
+        type: object
+        additionalProperties: true
+        description: "Additional metadata for the node"
+
+      tags:
+        type: array
+        items:
+          type: string
+        uniqueItems: true
+        description: "Tags for the node"
+
+      integrations:
+        type: object
+        properties:
+          jira:
+            type: object
+            properties:
+              issueKey:
+                type: string
+                pattern: "^[A-Z]+-\\d+$"
+                description: "Jira issue key"
+                examples: ["PROJ-123", "DEV-456"]
+              projectKey:
+                type: string
+                pattern: "^[A-Z]+$"
+                description: "Jira project key"
+                examples: ["PROJ", "DEV"]
+            additionalProperties: false
+        additionalProperties: true
+        description: "External system integrations"
+
+    additionalProperties: false
+
+  Edge:
+    type: object
+    required:
+      - id
+      - name
+      - type
+      - from
+      - to
+    properties:
+      id:
+        type: string
+        pattern: "^[a-zA-Z][a-zA-Z0-9_-]*$"
+        description: "Unique identifier for the edge"
+
+      name:
+        type: string
+        minLength: 1
+        maxLength: 100
+        description: "Display name for the edge"
+
+      description:
+        type: string
+        maxLength: 500
+        description: "Optional description of the edge"
+
+      type:
+        type: string
+        enum: ["sequence", "conditional", "data_flow", "association", "composition", "aggregation"]
+        description: "Type of connection"
+
+      from:
+        type: string
+        description: "ID of the source node"
+
+      to:
+        type: string
+        description: "ID of the target node"
+
+      condition:
+        type: string
+        maxLength: 200
+        description: "Condition for conditional edges"
+        examples:
+          - "user.isAuthenticated"
+          - "payment.amount > 1000"
+
+      style:
+        $ref: "#/definitions/Style"
+
+      waypoints:
+        type: array
+        items:
+          type: object
+          required: ["x", "y"]
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+          additionalProperties: false
+        description: "Custom routing points for the edge"
+
+      metadata:
+        type: object
+        additionalProperties: true
+        description: "Additional metadata for the edge"
+
+      tags:
+        type: array
+        items:
+          type: string
+        uniqueItems: true
+        description: "Tags for the edge"
+
+    additionalProperties: false
+
+  Style:
+    type: object
+    properties:
+      fill:
+        type: string
+        pattern: "^#[0-9A-Fa-f]{6}$|^#[0-9A-Fa-f]{3}$|^rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)$|^rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*[0-9.]+\\)$"
+        description: "Fill color"
+        examples: ["#3498db", "#e74c3c", "rgb(52, 152, 219)"]
+
+      stroke:
+        type: string
+        pattern: "^#[0-9A-Fa-f]{6}$|^#[0-9A-Fa-f]{3}$|^rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)$|^rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*[0-9.]+\\)$"
+        description: "Stroke color"
+
+      strokeWidth:
+        type: number
+        minimum: 0
+        maximum: 20
+        description: "Stroke width in pixels"
+
+      strokeDasharray:
+        type: string
+        pattern: "^\\d+(,\\s*\\d+)*$"
+        description: "Stroke dash pattern"
+        examples: ["5,5", "10,5,5,5"]
+
+      opacity:
+        type: number
+        minimum: 0
+        maximum: 1
+        description: "Opacity level"
+
+      fontSize:
+        type: number
+        minimum: 8
+        maximum: 72
+        description: "Font size in pixels"
+
+      fontFamily:
+        type: string
+        description: "Font family"
+        examples: ["Arial", "Helvetica", "Times New Roman"]
+
+      fontWeight:
+        type: string
+        enum: ["normal", "bold", "bolder", "lighter", "100", "200", "300", "400", "500", "600", "700", "800", "900"]
+        description: "Font weight"
+
+      textColor:
+        type: string
+        pattern: "^#[0-9A-Fa-f]{6}$|^#[0-9A-Fa-f]{3}$|^rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)$|^rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*[0-9.]+\\)$"
+        description: "Text color"
+
+    additionalProperties: false
+
+examples:
+  - id: "simple_flow"
+    name: "Simple Process Flow"
+    description: "A basic example of a process flow"
+    version: "1.0.0"
+    tags: ["example", "basic"]
+    nodes:
+      - id: "start"
+        name: "Start"
+        type: "start"
+        position: { x: 100, y: 50 }
+        dimensions: { width: 80, height: 40 }
+      - id: "process1"
+        name: "Process Data"
+        type: "process"
+        position: { x: 100, y: 150 }
+        dimensions: { width: 120, height: 60 }
+      - id: "end"
+        name: "End"
+        type: "end"
+        position: { x: 100, y: 250 }
+        dimensions: { width: 80, height: 40 }
+    edges:
+      - id: "edge1"
+        name: "Start to Process"
+        type: "sequence"
+        from: "start"
+        to: "process1"
+      - id: "edge2"
+        name: "Process to End"
+        type: "sequence"
+        from: "process1"
+        to: "end"

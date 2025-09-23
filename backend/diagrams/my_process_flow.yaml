@@ -1,0 +1,144 @@
+id: my_process_flow
+name: My Process Flow
+description: A custom business process diagram
+version: 1.0.0
+nodes:
+    - id: start
+      name: Start
+      type: start
+      position:
+        x: 65
+        "y": 115
+      dimensions:
+        width: 100
+        height: 50
+      style:
+        fill: '#2ecc71'
+        stroke: '#27ae60'
+    - id: gather_info
+      name: Gather Information
+      type: process
+      position:
+        x: 235
+        "y": 115
+      dimensions:
+        width: 153
+        height: 49
+      style:
+        fill: '#3498db'
+        stroke: '#2980b9'
+    - id: decision_point
+      name: Approve?
+      type: data
+      position:
+        x: 450
+        "y": 116
+      dimensions:
+        width: 101
+        height: 49
+      style:
+        fill: '#f1c40f'
+        stroke: '#e67e22'
+    - id: execute
+      name: Execute Plan
+      type: process
+      position:
+        x: 345
+        "y": 240
+      dimensions:
+        width: 120
+        height: 49
+      style:
+        fill: '#9b59b6'
+        stroke: '#8e44ad'
+      integrations:
+        jira:
+            issueKey: PROJ-789
+            projectKey: PROJ
+    - id: reject
+      name: Reject & Notify
+      type: process
+      position:
+        x: 535
+        "y": 240
+      dimensions:
+        width: 130
+        height: 49
+      style:
+        fill: '#e74c3c'
+        stroke: '#c0392b'
+    - id: complete
+      name: Complete
+      type: end
+      position:
+        x: 455
+        "y": 375
+      dimensions:
+        width: 90
+        height: 90
+      style:
+        fill: '#2ecc71'
+        stroke: '#27ae60'
+edges:
+    - id: start_to_gather
+      name: Begin
+      metadata:
+        labelOffset:
+            along: -0.0367964582501724
+            perp: -0.22869181117020482
+      type: sequence
+      from: start
+      to: gather_info
+    - id: gather_to_decision
+      name: Review
+      metadata:
+        labelOffset:
+            along: -0.007532144239044467
+            perp: -0.2974136702616866
+        technology: rest
+      type: sequence
+      from: gather_info
+      to: decision_point
+      style:
+        stroke: '#34495e'
+        strokeWidth: 2
+        strokeDasharray: --
+    - id: approve_yes
+      name: "Yes"
+      type: conditional
+      from: decision_point
+      to: execute
+      condition: approved === true
+      style:
+        stroke: '#2ecc71'
+        strokeWidth: 3
+    - id: approve_no
+      name: "No"
+      metadata:
+        labelOffset:
+            along: -0.028529371595065044
+            perp: 0.006678334316573912
+      type: conditional
+      from: decision_point
+      to: reject
+      condition: approved === false
+      style:
+        stroke: '#e74c3c'
+        strokeDasharray: 5,5
+    - id: execute_to_complete
+      name: Finish
+      type: sequence
+      from: execute
+      to: complete
+    - id: reject_to_complete
+      name: End
+      type: sequence
+      from: reject
+      to: complete
+layout:
+    direction: top-bottom
+    spacing:
+        node: 50
+        rank: 100
+created: 2025-09-20T21:44:22.694563-05:00
+updated: 2025-09-21T14:29:31.554988-05:00

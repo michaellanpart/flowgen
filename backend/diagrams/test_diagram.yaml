@@ -1,0 +1,175 @@
+id: test_diagram
+name: Test Diagram
+version: 1.0.0
+nodes:
+  - id: process_1758491813602
+    name: Start
+    type: start
+    position:
+      x: 100
+      y: 211
+    dimensions:
+      width: 80
+      height: 60
+    style:
+      fill: '#3498DB'
+  - id: connector_1758492243168
+    name: New Step
+    type: process
+    position:
+      x: 470
+      y: 380
+    dimensions:
+      width: 105
+      height: 60
+    style:
+      fill: '#CCCCCC'
+  - id: process_1758497587395
+    name: Passed Validation
+    type: process
+    position:
+      x: 235
+      y: 211
+    dimensions:
+      width: 157
+      height: 60
+    style:
+      fill: '#DFAA86'
+  - id: connector_1758492243168_step_1758498517717
+    name: New Step 3
+    type: process
+    position:
+      x: 470
+      y: 210
+    dimensions:
+      width: 117
+      height: 60
+    style:
+      fill: '#DDADF0'
+  - id: process_1758497587395_step_1758503316733
+    name: "Yes"
+    type: decision
+    position:
+      x: 334
+      y: 374
+    dimensions:
+      width: 75
+      height: 75
+    style:
+      fill: '#27AE60'
+  - id: process_1758497587395_step_1758503351699
+    name: "No"
+    type: decision
+    position:
+      x: 220
+      y: 371
+    dimensions:
+      width: 72
+      height: 72
+    style:
+      fill: '#E74C3C'
+  - id: process_1758497587395_step_1758503351699_step_1758503470042
+    name: End
+    type: end
+    position:
+      x: 220
+      y: 495
+    dimensions:
+      width: 69
+      height: 69
+    style:
+      fill: '#CCCCCC'
+  - id: connector_1758492243168_step_1758498517717_step_1758503642983
+    name: Finish
+    type: end
+    position:
+      x: 680
+      y: 200
+    dimensions:
+      width: 83
+      height: 83
+    style:
+      fill: '#2ECC71'
+  - id: process_1758625514131
+    name: Something Else
+    type: process
+    position:
+      x: 465
+      y: 100
+    dimensions:
+      width: 143
+      height: 60
+    style:
+      fill: '#3498DB'
+edges:
+  - id: connector_1758492243168-connector_1758492243168_step_1758498517717-1758498517718
+    name: ""
+    type: ""
+    from: connector_1758492243168
+    to: connector_1758492243168_step_1758498517717
+    style:
+      stroke: '#34495e'
+      strokeWidth: 2
+  - id: process_1758491813602-process_1758497587395-1758501011747
+    name: ""
+    type: ""
+    from: process_1758491813602
+    to: process_1758497587395
+    style:
+      stroke: '#34495e'
+      strokeWidth: 2
+  - id: process_1758497587395-process_1758497587395_step_1758503316733-1758503316734
+    name: ""
+    type: ""
+    from: process_1758497587395
+    to: process_1758497587395_step_1758503316733
+    style:
+      stroke: '#34495e'
+      strokeWidth: 2
+  - id: process_1758497587395-process_1758497587395_step_1758503351699-1758503351699
+    name: ""
+    type: ""
+    from: process_1758497587395
+    to: process_1758497587395_step_1758503351699
+    style:
+      stroke: '#34495e'
+      strokeWidth: 2
+  - id: process_1758497587395_step_1758503351699-process_1758497587395_step_1758503351699_step_1758503470042-1758503470043
+    name: ""
+    type: ""
+    from: process_1758497587395_step_1758503351699
+    to: process_1758497587395_step_1758503351699_step_1758503470042
+    style:
+      stroke: '#34495e'
+      strokeWidth: 2
+  - id: process_1758497587395_step_1758503316733-connector_1758492243168-1758503545304
+    name: ""
+    type: ""
+    from: process_1758497587395_step_1758503316733
+    to: connector_1758492243168
+    style:
+      stroke: '#34495e'
+      strokeWidth: 2
+  - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758503642984
+    name: ""
+    type: ""
+    from: connector_1758492243168_step_1758498517717
+    to: connector_1758492243168_step_1758498517717_step_1758503642983
+    style:
+      stroke: '#34495e'
+      strokeWidth: 2
+  - id: process_1758497587395-process_1758625514131-1758625522259
+    name: ""
+    type: ""
+    from: process_1758497587395
+    to: process_1758625514131
+    style:
+      stroke: '#34495e'
+      strokeWidth: 2
+layout:
+  direction: top-bottom
+  spacing:
+    node: 50
+    rank: 100
+created: 2025-09-21T16:42:15.522793-05:00
+updated: 2025-09-23T06:43:44.672768-05:00

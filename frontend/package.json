@@ -1,0 +1,20 @@
+{
+  "name": "flowgen-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static frontend for FlowGen served by Golang backend",
+  "scripts": {
+    "start": "echo 'Static frontend served by Go backend'",
+    "build": "echo 'No build step yet'",
+    "lint": "echo 'no frontend linting configured'",
+    "format": "echo 'no frontend formatting configured'"
+  },
+  "keywords": [
+    "diagramming",
+    "yaml",
+    "flow-diagrams",
+    "visualization"
+  ],
+  "author": "Michael Lanpart",
+  "license": "MIT"
+}
