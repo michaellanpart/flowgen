@@ -33,6 +33,28 @@ cd backend
 go run ./cmd
 ```
 
+### Makefile
+
+Common tasks are available via the root `Makefile`:
+
+```bash
+# List available targets
+make help
+
+# Build backend (and optional frontend if you add scripts)
+make build
+
+# Run backend server (serves frontend)
+make run
+
+# Lint and test backend (frontend steps are optional)
+make lint
+make test
+
+# Clean build artifacts
+make clean
+```
+
 Frontend (Node toolchain lives under `frontend/`):
 
 ```bash
