@@ -1107,17 +1107,19 @@
 
         function finishDrag() {
             if (!draggedNode) return;
+            // Work with a stable reference; we may null out draggedNode later
+            const dn = draggedNode;
 
-            draggedNode.classList.remove('dragging');
+            dn.classList.remove('dragging');
 
             // Apply final snap-to-grid if enabled (diamonds by center)
             if (snapToGrid) {
                 // Use style-based coordinates (unaffected by rotation) to avoid jumpy behavior
-                const currentX = parseInt(draggedNode.style.left) || 0;
-                const currentY = parseInt(draggedNode.style.top) || 0;
-                const snapped = snapNodePosition(draggedNode, currentX, currentY, false);
-                draggedNode.style.left = snapped.x + 'px';
-                draggedNode.style.top = snapped.y + 'px';
+                const currentX = parseInt(dn.style.left) || 0;
+                const currentY = parseInt(dn.style.top) || 0;
+                const snapped = snapNodePosition(dn, currentX, currentY, false);
+                dn.style.left = snapped.x + 'px';
+                dn.style.top = snapped.y + 'px';
             }
 
             // Update the diagram data
@@ -1133,7 +1135,7 @@
                 clearTimeout(dragUpdateTimer);
                 dragUpdateTimer = null;
             }
-            draggedNode = null;
+            // Do not null yet; we still need to compare orig vs new below
 
             // Remove global event listeners
             document.removeEventListener('mousemove', handleMouseMove);
@@ -1145,21 +1147,23 @@
             document.body.style.userSelect = '';
 
             // If position actually changed, mark dirty and autosave
-            const origLeft = parseInt(draggedNode.dataset.origLeft || '0');
-            const origTop = parseInt(draggedNode.dataset.origTop || '0');
-            const newLeft = parseInt(draggedNode.style.left) || 0;
-            const newTop = parseInt(draggedNode.style.top) || 0;
+            const origLeft = parseInt(dn.dataset.origLeft || '0');
+            const origTop = parseInt(dn.dataset.origTop || '0');
+            const newLeft = parseInt(dn.style.left) || 0;
+            const newTop = parseInt(dn.style.top) || 0;
             // Cleanup stored originals
-            delete draggedNode.dataset.origLeft;
-            delete draggedNode.dataset.origTop;
+            delete dn.dataset.origLeft;
+            delete dn.dataset.origTop;
 
             if (origLeft !== newLeft || origTop !== newTop) {
                 hasUnsavedChanges = true;
-                document.getElementById('saveButton').classList.add('show');
+                const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
                 scheduleAutoSave();
                 // Immediate silent autosave for position changes
                 saveDiagram(true);
             }
+            // Now that we're done, clear the global
+            draggedNode = null;
         }
 
         function updateDiagramData() {
@@ -1883,7 +1887,7 @@
             const dash = (document.getElementById('edgeDash').value || '').trim();
             edge.style.strokeDasharray = dash || undefined;
             hasUnsavedChanges = true;
-            document.getElementById('saveButton').classList.add('show');
+            const sbDel = document.getElementById('saveButton'); if (sbDel) sbDel.classList.add('show');
             scheduleAutoSave();
             // Immediate silent autosave for editor-based edge updates
             saveDiagram(true);
