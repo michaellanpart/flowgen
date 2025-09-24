@@ -1336,7 +1336,9 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    // Ensure background saves outlive navigation (refresh/close)
+                    keepalive: true
                 });
 
                 if (response.ok) {
@@ -1374,12 +1376,20 @@
                     let msg = 'Save failed';
                     try { const error = await response.json(); msg = `Save failed: ${error.error}`; } catch (_) { }
                     if (!silent) showMessage(msg, 'error');
-                    else console.error(msg);
+                    else {
+                        console.error(msg);
+                        // Surface silent autosave failures so users know persistence didn’t occur
+                        showMessage(msg, 'error');
+                    }
                 }
             } catch (error) {
                 const msg = `Save error: ${error.message}`;
                 if (!silent) showMessage(msg, 'error');
-                else console.error(msg);
+                else {
+                    console.error(msg);
+                    // Surface silent autosave failures
+                    showMessage(msg, 'error');
+                }
             } finally {
                 try { clearTimeout(autosaveTimer); } catch (_) { }
                 autosaveTimer = null;
@@ -1787,7 +1797,7 @@
             if (bg) bg.classList.add('selected');
         }
 
-        function deleteSelectedEdge() {
+        async function deleteSelectedEdge() {
             if (!selectedEdgeId || !currentDiagram?.edges) return;
             const idx = currentDiagram.edges.findIndex(e => (e.id || `${e.from}-${e.to}`) === selectedEdgeId);
             if (idx >= 0) {
@@ -1798,7 +1808,7 @@
                 document.getElementById('saveButton').classList.add('show');
                 scheduleAutoSave();
                 // Immediate autosave on connector delete (force save)
-                saveDiagram(true, true);
+                await saveDiagram(true, true);
                 showMessage('Connector removed', 'success');
                 updateDiagramInfoBox();
             }
@@ -2446,10 +2456,10 @@
             }
         }
 
-        function confirmDeleteCurrentNode() {
+        async function confirmDeleteCurrentNode() {
             if (!editingNode || !editingNodeElement) return;
             if (confirm('Delete this node and its connections?')) {
-                deleteNode(editingNode, editingNodeElement);
+                await deleteNode(editingNode, editingNodeElement);
             }
         }
 
@@ -2802,7 +2812,7 @@
         // Click-to-connect state
         let clickConnectState = null;
 
-        function deleteNode(node, nodeElement) {
+        async function deleteNode(node, nodeElement) {
             if (!currentDiagram) return;
 
             // Remove from diagram data
@@ -2828,7 +2838,7 @@
             document.getElementById('saveButton').classList.add('show');
             scheduleAutoSave();
             // Immediate autosave on delete (force even if flags not set yet)
-            saveDiagram(true, true);
+            await saveDiagram(true, true);
 
             closeNodeEditor();
             showMessage('Node deleted successfully!', 'success');
