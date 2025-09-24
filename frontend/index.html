@@ -1191,57 +1191,37 @@
             if (!currentDiagram || !currentDiagram.edges) return;
 
             // Prevent concurrent updates that could cause multiple lines
-            if (isUpdatingConnections) {
-                return;
-            }
+            if (isUpdatingConnections) return;
             isUpdatingConnections = true;
+
             const display = document.getElementById('flowchartDisplay');
-            if (!display) {
-                isUpdatingConnections = false;
-                return;
-            }
+            if (!display) { isUpdatingConnections = false; return; }
             const stage = document.getElementById('diagramStage') || display;
 
             try {
-                // Diagnostics: counts before cleanup
-                const preAllSvgs = display.querySelectorAll('svg');
-                const preGridSvgs = display.querySelectorAll('svg.grid-overlay');
-                const preConnSvgs = display.querySelectorAll('svg.connections-layer');
-                const preHtmlEdges = display.querySelectorAll('.edge, .edge-label');
+                // Ensure we have exactly one connections-layer SVG and one edges-layer group
+                let svg = stage.querySelector('svg.connections-layer');
+                if (!svg) {
+                    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.className = 'connections-layer';
+                    svg.style.position = 'absolute';
+                    svg.style.top = '0';
+                    svg.style.left = '0';
+                    svg.style.width = '100%';
+                    svg.style.height = '100%';
+                    svg.style.zIndex = '1';
+                    svg.style.pointerEvents = 'auto';
+                    stage.appendChild(svg);
+                }
+                let edgesGroup = svg.querySelector('g.edges-layer');
+                if (!edgesGroup) {
+                    edgesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    edgesGroup.setAttribute('class', 'edges-layer');
+                    svg.appendChild(edgesGroup);
+                }
 
-
-                // Safety cleanup: remove any legacy HTML-based edges
-                preHtmlEdges.forEach(el => el.remove());
-
-                // Extra safety: remove any stale connection elements anywhere in the document
-                document.querySelectorAll('line.connection-line, polygon.connection-arrowhead, text.connection-label, rect.connection-label-bg').forEach(el => el.remove());
-
-                // Extra safety: remove any connections-layer SVGs that are not within our display container
-                document.querySelectorAll('svg.connections-layer').forEach(el => {
-                    if (!display.contains(el)) el.remove();
-                });
-
-                // Safety cleanup: remove any existing connections-layer SVGs (preserve the grid overlay)
-                const oldConnSvgs = display.querySelectorAll('svg.connections-layer');
-                oldConnSvgs.forEach(el => el.remove());
-
-                // Create a fresh connections SVG
-                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.className = 'connections-layer';
-                svg.style.position = 'absolute';
-                svg.style.top = '0';
-                svg.style.left = '0';
-                svg.style.width = '100%';
-                svg.style.height = '100%';
-                svg.style.zIndex = '1';
-                svg.style.pointerEvents = 'auto';
-                // Append to stage so it scales with zoom
-                stage.appendChild(svg);
-
-                // Create a fresh edges group inside the SVG
-                const edgesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                edgesGroup.setAttribute('class', 'edges-layer');
-                svg.appendChild(edgesGroup);
+                // Clear only our drawn edges, preserve previews/other overlays
+                edgesGroup.querySelectorAll('line.connection-line, polygon.connection-arrowhead, text.connection-label, rect.connection-label-bg').forEach(el => el.remove());
 
                 // Rebuild connections with new positions
                 const nodePositions = {};
@@ -1297,14 +1277,11 @@
                     const toNode = nodePositions[edge.to];
 
                     if (fromNode && toNode) {
-
                         // Draw into the dedicated edges group
                         drawEdge(edgesGroup, fromNode, toNode, edge);
                     }
                 });
-
-                // Log the final state after drawing all connections
-
+                // Done
             } finally {
                 // Release the update lock even if something throws
                 isUpdatingConnections = false;
