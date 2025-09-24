@@ -34,52 +34,13 @@
             <a class="nav-link" id="navViewDiagram" onclick="switchView('diagram')">Diagram</a>
             <a class="nav-link" id="navViewRender" onclick="switchView('render')">Render</a>
             <a class="nav-link" id="navViewRaw" onclick="switchView('raw')">Raw Data</a>
-            <div class="nav-dropdown" id="navInsertDd">
-                <button class="nav-btn" onclick="toggleNavDropdown(event, 'navInsertDd')">Insert ▾</button>
-                <div class="nav-dropdown-menu">
-                    <div class="nav-menu-item">
-                        <label for="navInsertType"
-                            style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Step Type</label>
-                        <select id="navInsertType" onchange="/* sync value; no immediate action */"
-                            style="width:100%;padding:6px 8px;box-sizing:border-box;">
-                            <option value="process">Process</option>
-                            <option value="start">Start</option>
-                            <option value="end">End</option>
-                            <option value="decision">Decision</option>
-                            <option value="data">Data</option>
-                            <option value="connector">Connector</option>
-                        </select>
-                        <button class="nav-btn" style="width:100%;margin-top:6px;"
-                            onclick="quickAddFromNavbar()">Add</button>
-                    </div>
-                </div>
-            </div>
+
             <div class="nav-dropdown" id="navLayoutDd">
                 <button class="nav-btn" onclick="toggleNavDropdown(event, 'navLayoutDd')">Layout ▾</button>
                 <div class="nav-dropdown-menu">
                     <div class="nav-menu-item" onclick="alignDiagram()">Align Diagram</div>
                     <div class="nav-sep"></div>
-                    <div class="nav-menu-item">
-                        <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Grid</label>
-                        <div style="display:flex;align-items:center;gap:6px;">
-                            <label style="font-size:12px;">Snap</label>
-                            <input type="checkbox" id="navGridSnap" onchange="applyNavbarGridChange()" />
-                        </div>
-                        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-                            <label style="font-size:12px;">Size</label>
-                            <input type="number" id="navGridSize" min="5" max="200" step="1"
-                                oninput="applyNavbarGridChange()" style="width:80px;" />
-                        </div>
-                        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-                            <label style="font-size:12px;">Opacity</label>
-                            <input type="range" id="navGridOpacity" min="0" max="1" step="0.05"
-                                oninput="applyNavbarGridChange()" />
-                        </div>
-                        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-                            <label style="font-size:12px;">Color</label>
-                            <input type="color" id="navGridColor" onchange="applyNavbarGridChange()" />
-                        </div>
-                    </div>
+
                     <div class="nav-sep"></div>
                     <div class="nav-menu-item" style="cursor:default;">
                         <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:6px;">Info Panel</label>
@@ -481,7 +442,7 @@
         let editorDocked = false;
 
         // Grid and Layout Settings
-        let gridEnabled = true;
+        let gridEnabled = false;
         // Runtime-only flag to remember if we forced the grid on due to Edit Mode
         let gridForcedByEdit = false;
         let snapToGrid = true;
@@ -1013,12 +974,7 @@
                     node.style.cursor = 'move';
                     enableDragging(node);
                 });
-                // Force grid visible while in edit mode
-                if (!gridEnabled) {
-                    gridForcedByEdit = true;
-                    gridEnabled = true;
-                    showGrid();
-                }
+                // Do not force grid visible while in edit mode anymore
                 showMessage('Edit Mode: Drag to move, Double-click to edit, Right-click for options. Delete nodes via the editor.', 'info');
             } else {
                 if (btn) { btn.textContent = '✏️ Edit Mode'; btn.style.background = '#3498db'; }
@@ -1026,16 +982,7 @@
                     node.style.cursor = 'pointer';
                     disableDragging(node);
                 });
-                // If we forced the grid on just for edit mode, restore previous off state
-                if (gridForcedByEdit) {
-                    gridForcedByEdit = false;
-                    // Respect user/app setting for gridEnabled in appSettings
-                    const shouldBeOn = !!appSettings.gridEnabled;
-                    if (!shouldBeOn) {
-                        gridEnabled = false;
-                        hideGrid();
-                    }
-                }
+                // No special grid forcing while leaving edit mode
                 closeNodeEditor(); // Close editor when exiting edit mode
                 showMessage('View Mode: Click nodes for info', 'info');
             }
@@ -3783,8 +3730,8 @@
 
         // ============ APPLICATION SETTINGS (Persistent) ============
         const defaultAppSettings = {
-            gridEnabled: true,
-            snapToGrid: true,
+            gridEnabled: false,
+            snapToGrid: false,
             gridSize: 25,
             gridColor: '#bdc3c7',
             gridOpacity: 0.3,
@@ -3955,13 +3902,8 @@
             // grid button UI removed
 
             if (refreshGrid) {
-                // Recreate the grid with new settings
-                // If in edit mode, ensure the grid is visible regardless of saved setting
-                if (editMode || gridEnabled) {
-                    showGrid();
-                } else {
-                    hideGrid();
-                }
+                // Recreate the grid with new settings; do not force in edit mode
+                if (gridEnabled) { showGrid(); } else { hideGrid(); }
                 updateConnections();
             }
 
@@ -3998,13 +3940,8 @@
             populateRibbonGridControls();
             populateNavbarGridControls();
             populateNavbarInfoPanelMode();
-            // Sync initial insert type
-            const insertSel = document.getElementById('insertNodeType');
-            const navSel = document.getElementById('navInsertType');
-            if (insertSel && navSel) navSel.value = insertSel.value;
-            if (editMode || gridEnabled) {
-                showGrid();
-            }
+            // Grid is not auto-shown; only render if explicitly enabled
+            if (gridEnabled) { showGrid(); }
             // grid button UI removed
             // Initialize color picker controls and favorites container
             try { initColorPickerControls(); renderFavoriteColors(); } catch (_) { }
@@ -4173,11 +4110,12 @@
                     return null;
                 }
 
-                // Compute node center in stage coordinates
-                const displayRect = document.getElementById('flowchartDisplay').getBoundingClientRect();
+                // Compute node center in stage/content coordinates (include container scroll)
+                const displayEl = document.getElementById('flowchartDisplay');
+                const displayRect = displayEl.getBoundingClientRect();
                 const nodeRect = nodeElement.getBoundingClientRect();
-                const nodeCX = ((nodeRect.left + nodeRect.width / 2) - displayRect.left) / (zoomScale || 1);
-                const nodeCY = ((nodeRect.top + nodeRect.height / 2) - displayRect.top) / (zoomScale || 1);
+                const nodeCX = (((nodeRect.left + nodeRect.width / 2) - displayRect.left) + displayEl.scrollLeft) / (zoomScale || 1);
+                const nodeCY = (((nodeRect.top + nodeRect.height / 2) - displayRect.top) + displayEl.scrollTop) / (zoomScale || 1);
 
                 // Choose the connector whose actual angle from the node center best matches targetAngle
                 let best = null;
@@ -4186,8 +4124,8 @@
 
                 connectionPoints.forEach(point => {
                     const pr = point.getBoundingClientRect();
-                    const px = ((pr.left + pr.width / 2) - displayRect.left) / (zoomScale || 1);
-                    const py = ((pr.top + pr.height / 2) - displayRect.top) / (zoomScale || 1);
+                    const px = (((pr.left + pr.width / 2) - displayRect.left) + displayEl.scrollLeft) / (zoomScale || 1);
+                    const py = (((pr.top + pr.height / 2) - displayRect.top) + displayEl.scrollTop) / (zoomScale || 1);
                     const ang = Math.atan2(py - nodeCY, px - nodeCX);
                     const diff = Math.abs(normalizeAngle(targetAngle - ang));
                     if (diff < bestDiff) {
