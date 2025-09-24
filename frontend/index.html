@@ -445,7 +445,7 @@
         let gridEnabled = false;
         // Runtime-only flag to remember if we forced the grid on due to Edit Mode
         let gridForcedByEdit = false;
-        let snapToGrid = true;
+        let snapToGrid = false;
         let gridSize = 25;
         let gridSvg = null;
         // Grid visual customization
@@ -1797,8 +1797,8 @@
                 hasUnsavedChanges = true;
                 document.getElementById('saveButton').classList.add('show');
                 scheduleAutoSave();
-                // Immediate autosave on connector delete
-                saveDiagram(true);
+                // Immediate autosave on connector delete (force save)
+                saveDiagram(true, true);
                 showMessage('Connector removed', 'success');
                 updateDiagramInfoBox();
             }
@@ -2827,8 +2827,8 @@
             hasUnsavedChanges = true;
             document.getElementById('saveButton').classList.add('show');
             scheduleAutoSave();
-            // Immediate autosave on delete
-            saveDiagram(true);
+            // Immediate autosave on delete (force even if flags not set yet)
+            saveDiagram(true, true);
 
             closeNodeEditor();
             showMessage('Node deleted successfully!', 'success');
@@ -3940,7 +3940,12 @@
             populateRibbonGridControls();
             populateNavbarGridControls();
             populateNavbarInfoPanelMode();
-            // Grid is not auto-shown; only render if explicitly enabled
+            // Force grid and snapping off by default (override any older saved setting)
+            appSettings.gridEnabled = false;
+            appSettings.snapToGrid = false;
+            saveAppSettingsSilent();
+            applySettings(true);
+            // Grid is not auto-shown; only render if explicitly enabled (kept for completeness)
             if (gridEnabled) { showGrid(); }
             // grid button UI removed
             // Initialize color picker controls and favorites container
