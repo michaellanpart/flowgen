@@ -1371,6 +1371,11 @@
                     } else {
                         // Silent saves: avoid re-fetch to prevent jitter; refresh summary only
                         updateDiagramInfoBox();
+                        // If Raw Data view is open, refresh YAML so users immediately see persisted changes
+                        try {
+                            const isRawActive = document.getElementById('configurationTab')?.style.display === 'block';
+                            if (isRawActive) { await loadYamlConfig(); }
+                        } catch (_) { }
                     }
                 } else {
                     let msg = 'Save failed';
