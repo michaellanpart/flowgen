@@ -753,6 +753,18 @@
                     infoPanelCloseTimer = setTimeout(() => { maybeCloseInfoPanelTemp(); }, 150);
                 });
             }
+
+            // Keep connectors aligned on viewport changes and container scroll
+            const display = document.getElementById('flowchartDisplay');
+            if (display) {
+                display.addEventListener('scroll', () => {
+                    // Debounce minimal — connectors are quick to redraw
+                    try { updateConnections(); } catch (_) { }
+                });
+            }
+            window.addEventListener('resize', () => {
+                try { updateConnections(); } catch (_) { }
+            });
         });
         function setSelectedNode(nodeEl) {
             if (selectedNodeElement === nodeEl) return;
@@ -1096,10 +1108,12 @@
         }
 
         function updateNodePosition(clientX, clientY) {
-            const displayRect = document.getElementById('flowchartDisplay').getBoundingClientRect();
+            const displayEl = document.getElementById('flowchartDisplay');
+            const displayRect = displayEl.getBoundingClientRect();
 
-            let newX = (clientX - displayRect.left - nodeOffset.x) / zoomScale;
-            let newY = (clientY - displayRect.top - nodeOffset.y) / zoomScale;
+            // Account for container scroll when converting to stage/content coordinates
+            let newX = ((clientX - displayRect.left) + displayEl.scrollLeft - nodeOffset.x) / zoomScale;
+            let newY = ((clientY - displayRect.top) + displayEl.scrollTop - nodeOffset.y) / zoomScale;
 
             // Apply snap-to-grid (diamonds by center) with tolerance for smoother dragging
             if (snapToGrid && draggedNode) {
@@ -1109,8 +1123,8 @@
             }
 
             // Constrain within container
-            const maxX = (displayRect.width / zoomScale) - draggedNode.offsetWidth;
-            const maxY = (displayRect.height / zoomScale) - draggedNode.offsetHeight;
+            const maxX = ((displayRect.width + displayEl.scrollWidth - displayEl.clientWidth) / zoomScale) - draggedNode.offsetWidth;
+            const maxY = ((displayRect.height + displayEl.scrollHeight - displayEl.clientHeight) / zoomScale) - draggedNode.offsetHeight;
 
             const constrainedX = Math.max(0, Math.min(newX, maxX));
             const constrainedY = Math.max(0, Math.min(newY, maxY));
@@ -1689,8 +1703,9 @@
             if (!display || !cpEl) return { x: 0, y: 0 };
             const displayRect = display.getBoundingClientRect();
             const rect = cpEl.getBoundingClientRect();
-            const cx = ((rect.left + rect.width / 2) - displayRect.left) / zoomScale;
-            const cy = ((rect.top + rect.height / 2) - displayRect.top) / zoomScale;
+            // Convert viewport-relative center into content coordinates by adding scroll offset
+            const cx = (((rect.left + rect.width / 2) - displayRect.left) + display.scrollLeft) / zoomScale;
+            const cy = (((rect.top + rect.height / 2) - displayRect.top) + display.scrollTop) / zoomScale;
             return { x: Math.round(cx), y: Math.round(cy) };
         }
         function updateInfoPanelForNode(nodeEl) {
@@ -1929,10 +1944,12 @@
             const nodeEl = connectionPointEl.closest('.node');
             if (!nodeEl) return;
             const nodeId = nodeEl.dataset.nodeId;
-            const displayRect = document.getElementById('flowchartDisplay').getBoundingClientRect();
+            const displayEl = document.getElementById('flowchartDisplay');
+            const displayRect = displayEl.getBoundingClientRect();
             const ptRect = connectionPointEl.getBoundingClientRect();
-            const startX = ((ptRect.left + ptRect.width / 2) - displayRect.left) / zoomScale;
-            const startY = ((ptRect.top + ptRect.height / 2) - displayRect.top) / zoomScale;
+            // Include container scroll when converting to stage/content coordinates
+            const startX = (((ptRect.left + ptRect.width / 2) - displayRect.left) + displayEl.scrollLeft) / zoomScale;
+            const startY = (((ptRect.top + ptRect.height / 2) - displayRect.top) + displayEl.scrollTop) / zoomScale;
             // Ensure a connections SVG exists (create if missing)
             const stage = document.getElementById('diagramStage') || document.getElementById('flowchartDisplay');
             let svg = stage.querySelector('svg.connections-layer');
@@ -1983,9 +2000,11 @@
 
         function updateEdgeCreationPreview(clientX, clientY) {
             if (!edgeCreation) return;
-            const displayRect = document.getElementById('flowchartDisplay').getBoundingClientRect();
-            const x2 = (clientX - displayRect.left) / zoomScale;
-            const y2 = (clientY - displayRect.top) / zoomScale;
+            const displayEl = document.getElementById('flowchartDisplay');
+            const displayRect = displayEl.getBoundingClientRect();
+            // Include scroll offsets to align with content coordinates
+            const x2 = ((clientX - displayRect.left) + displayEl.scrollLeft) / zoomScale;
+            const y2 = ((clientY - displayRect.top) + displayEl.scrollTop) / zoomScale;
             const line = edgeCreation.previewLine;
             line.setAttribute('x2', x2);
             line.setAttribute('y2', y2);
@@ -3609,7 +3628,10 @@
 
         function applyZoom() {
             const stage = document.getElementById('diagramStage');
-            if (stage) stage.style.transform = `scale(${zoomScale})`;
+            if (stage) {
+                stage.style.transformOrigin = '0 0';
+                stage.style.transform = `scale(${zoomScale})`;
+            }
             const grid = document.querySelector('#flowchartDisplay svg.grid-overlay');
             if (grid) grid.style.transform = `scale(${zoomScale})`;
             if (grid) grid.style.transformOrigin = '0 0';
@@ -4680,8 +4702,9 @@
             // Compute absolute position of rect
             const rectBox = rect.getBoundingClientRect();
             const hostBox = display.getBoundingClientRect();
-            const left = rectBox.left - hostBox.left;
-            const top = rectBox.top - hostBox.top;
+            // Include scroll so overlay matches content coordinates even when scrolled/zoomed
+            const left = (rectBox.left - hostBox.left) + display.scrollLeft;
+            const top = (rectBox.top - hostBox.top) + display.scrollTop;
             const width = rectBox.width;
             const height = rectBox.height;
 
