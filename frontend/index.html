@@ -1983,7 +1983,7 @@
             document.removeEventListener('touchend', handleTouchEnd);
         }
 
-        function finishEdgeCreation(eventLike) {
+        async function finishEdgeCreation(eventLike) {
             if (!edgeCreation) return;
             // Determine if the end is over a valid connection point of another node
             const stack = (document.elementsFromPoint ? document.elementsFromPoint(eventLike.clientX, eventLike.clientY) : [document.elementFromPoint(eventLike.clientX, eventLike.clientY)]).filter(Boolean);
@@ -2015,10 +2015,10 @@
             };
             currentDiagram.edges.push(newEdge);
             hasUnsavedChanges = true;
-            document.getElementById('saveButton').classList.add('show');
+            const sbAdd = document.getElementById('saveButton'); if (sbAdd) sbAdd.classList.add('show');
             scheduleAutoSave();
             // Immediate autosave on connector add (drag-connect)
-            saveDiagram(true);
+            await saveDiagram(true, true);
             updateConnections();
             updateDiagramInfoBox();
             // Optionally open editor
