@@ -130,12 +130,7 @@
                     </div>
                 </div>
                 <aside class="info-panel" id="infoPanel" aria-live="polite">
-                    <div class="info-panel-header">
-                        <div>
-                            <div id="infoTitle" class="info-title"></div>
-                            <div id="infoSubtitle" class="info-subtitle"></div>
-                        </div>
-                    </div>
+                    <!-- Flat card-style body; header removed per design -->
                     <div id="infoPanelBody" class="info-section"></div>
                 </aside>
             </div>
@@ -160,8 +155,10 @@
 
 
         <!-- Node Editor Modal -->
-        <div id="nodeEditor" class="node-editor">
-            <h3 class="editor-header">✏️ Edit Node</h3>
+        <div id="nodeEditor" class="node-editor"
+            style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#fff;">
+            <div class="panel-title" style="font-weight:600;font-size:13px;margin-bottom:8px;color:#374151;">Node
+                Settings</div>
 
             <div class="accordion" id="nodeEditorAccordion">
                 <!-- Basic -->
@@ -350,8 +347,10 @@
         </div>
 
         <!-- Edge Editor Modal -->
-        <div id="edgeEditor" class="node-editor" style="display:none;">
-            <h3 class="editor-header">🔗 Edit Connector</h3>
+        <div id="edgeEditor" class="node-editor"
+            style="display:none;border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#fff;">
+            <div class="panel-title" style="font-weight:600;font-size:13px;margin-bottom:8px;color:#374151;">Connector
+                Settings</div>
             <div class="editor-content">
                 <div class="editor-group">
                     <label for="edgeName">Label:</label>
@@ -1517,6 +1516,11 @@
                     } else {
                         // Silent saves: avoid re-fetch to prevent jitter; refresh summary only
                         updateDiagramInfoBox();
+                        // If viewing Raw Data, refresh YAML so changes are visible immediately
+                        const isRawActive = document.getElementById('configurationTab')?.style.display === 'block';
+                        if (isRawActive) {
+                            try { await loadYamlConfig(); } catch (_) { }
+                        }
                     }
                 } else {
                     updateAutosaveStatus('error');
@@ -1641,11 +1645,11 @@
             if (body) body.innerHTML = html;
         }
         function setInfoPanelHeader(title, subtitle = '') {
+            // Header removed for flat card design; keep elements empty if present
             const t = document.getElementById('infoTitle');
             const s = document.getElementById('infoSubtitle');
-            if (title === 'Info') title = '';
-            if (t) t.textContent = title || '';
-            if (s) s.textContent = subtitle || '';
+            if (t) t.textContent = '';
+            if (s) s.textContent = '';
         }
         // Dock the Defaults UI into the right panel and slide it open
         function dockDefaultsPanel() {
@@ -1694,7 +1698,7 @@
             editor.classList.add('docked');
             editorDocked = true;
             // Editing: keep header concise and do not show long name/id in subtitle
-            setInfoPanelHeader('Info', '');
+            setInfoPanelHeader('', '');
             applyInfoPanelState();
             // Add a small editing badge to the title for visibility
             try {
@@ -1927,7 +1931,7 @@
                     <ul class="info-list">${items || '<li>None</li>'}</ul>
                 </div>
             `;
-            setInfoPanelHeader('Info', `${name} · ${nodeId}`);
+            setInfoPanelHeader('', '');
             setInfoPanelBody(html);
         }
 
@@ -2643,6 +2647,37 @@
             if (bcEl) bcEl.value = (node.style?.stroke) || (appSettings?.defaults?.node?.borderColor) || '#1f2937';
             if (bwEl) bwEl.value = (node.style?.strokeWidth ?? (appSettings?.defaults?.node?.borderWidth ?? 2));
 
+            // Live-persist border changes: update node.style and autosave
+            if (bcEl && !bcEl._bound) {
+                bcEl._bound = true;
+                bcEl.addEventListener('input', () => {
+                    if (!editingNode) return;
+                    editingNode.style = editingNode.style || {};
+                    editingNode.style.stroke = bcEl.value || '#1f2937';
+                    try { updateNodeVisual(editingNode, editingNodeElement); } catch (_) { }
+                    try { updateConnections(); } catch (_) { }
+                    hasUnsavedChanges = true;
+                    const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
+                    scheduleAutoSave();
+                    saveDiagram(true);
+                });
+            }
+            if (bwEl && !bwEl._bound) {
+                bwEl._bound = true;
+                bwEl.addEventListener('input', () => {
+                    if (!editingNode) return;
+                    const n = Math.max(0, parseInt(bwEl.value, 10) || 0);
+                    editingNode.style = editingNode.style || {};
+                    editingNode.style.strokeWidth = n;
+                    try { updateNodeVisual(editingNode, editingNodeElement); } catch (_) { }
+                    try { updateConnections(); } catch (_) { }
+                    hasUnsavedChanges = true;
+                    const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
+                    scheduleAutoSave();
+                    saveDiagram(true);
+                });
+            }
+
             // Set text position buttons
             const textPos = node.textPosition || { horizontal: 'center', vertical: 'center' };
             document.querySelectorAll('.text-position-btn').forEach(btn => {
@@ -2848,8 +2883,17 @@
             // Update colors
             const style = node.style || {};
             nodeElement.style.backgroundColor = style.fill || getNodeTypeColor(node.type);
-            const strokeWidth = Math.max(0, Number(style.strokeWidth) || 0);
-            const borderColor = (style.stroke || '#333');
+            // Pull defaults from configuration for border if not explicitly set on the node
+            const defaultBorderWidth = (appSettings?.defaults?.node?.borderWidth ?? 2);
+            const defaultBorderColor = (appSettings?.defaults?.node?.borderColor ?? '#333');
+            // Determine border width: respect explicit 0 (no border); otherwise use configured default
+            let strokeWidth;
+            if (style && Object.prototype.hasOwnProperty.call(style, 'strokeWidth')) {
+                strokeWidth = Math.max(0, Number(style.strokeWidth) || 0);
+            } else {
+                strokeWidth = Math.max(0, Number(defaultBorderWidth) || 0);
+            }
+            const borderColor = (style.stroke != null ? style.stroke : defaultBorderColor);
 
             // Ensure CSS classes reflect current type (used by affordance styling)
             if ((node.type || '').toLowerCase() === 'decision') {
@@ -3666,9 +3710,16 @@
                 // Apply styling
                 const style = node.style || {};
                 nodeEl.style.backgroundColor = style.fill || getNodeTypeColor(node.type);
-                // Add borders like Render view (respect strokeWidth)
-                const borderColor = (style.stroke || '#333');
-                const borderWidth = Math.max(0, Number(style.strokeWidth) || 0);
+                // Add borders like Render view: if width missing but stroke set, default to 2; respect explicit 0
+                const defaultBorderWidth = (appSettings?.defaults?.node?.borderWidth ?? 2);
+                const defaultBorderColor = (appSettings?.defaults?.node?.borderColor ?? '#333');
+                const borderColor = (style.stroke != null ? style.stroke : defaultBorderColor);
+                let borderWidth;
+                if (Object.prototype.hasOwnProperty.call(style, 'strokeWidth')) {
+                    borderWidth = Math.max(0, Number(style.strokeWidth) || 0);
+                } else {
+                    borderWidth = Math.max(0, Number(defaultBorderWidth) || 0);
+                }
                 // Reset any previous borders/overlays
                 nodeEl.style.border = '';
                 const existingOverlay = nodeEl.querySelector('.shape-border-overlay');
@@ -3693,15 +3744,17 @@
                         nodeEl.style.transform = `rotate(${node.rotation}deg)`;
                     }
                     // Use an overlay to draw a clean border around the hexagon
-                    const overlay = document.createElement('div');
-                    overlay.className = 'shape-border-overlay';
-                    Object.assign(overlay.style, {
-                        position: 'absolute', top: '0', left: '0', right: '0', bottom: '0',
-                        pointerEvents: 'none',
-                        clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-                        boxShadow: `inset 0 0 0 2px ${borderColor}`
-                    });
-                    nodeEl.appendChild(overlay);
+                    if (borderWidth > 0) {
+                        const overlay = document.createElement('div');
+                        overlay.className = 'shape-border-overlay';
+                        Object.assign(overlay.style, {
+                            position: 'absolute', top: '0', left: '0', right: '0', bottom: '0',
+                            pointerEvents: 'none',
+                            clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+                            boxShadow: `inset 0 0 0 ${borderWidth}px ${borderColor}`
+                        });
+                        nodeEl.appendChild(overlay);
+                    }
                 } else {
                     // Rectangle/process
                     if (node.rotation) {
@@ -4130,9 +4183,9 @@
             const n = d.node || {};
             const e = d.edge || {};
             const html = `
-                <div class="info-section">
-                    <h3 class="editor-header">⚙️ Defaults for New Items</h3>
-                    
+                <div class="info-section" style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#fff;">
+                    <div class="panel-title" style="font-weight:600;font-size:13px;margin-bottom:8px;color:#374151;">Default Settings</div>
+
                     <div class="editor-group">
                         <label style="font-weight:600;">New Node</label>
                         <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;">
@@ -4172,10 +4225,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="editor-group" style="margin-top:16px;display:flex;gap:8px;">
-                        <button class="btn btn-sm btn-outline-primary" id="btnDefaultsSave">Save Defaults</button>
-                    </div>
-                    <div style="font-size:11px;color:#6b7280;margin-top:8px;">These apply to newly added nodes/connectors only. Existing items are unchanged.</div>
+                    <div style="font-size:11px;color:#6b7280;margin-top:8px;">Defaults apply to newly added nodes/connectors. Existing items are unchanged.</div>
                 </div>
             `;
             body.innerHTML = html;
@@ -4190,8 +4240,8 @@
             document.getElementById('defEdgeWidth').value = e.strokeWidth ?? 2;
             document.getElementById('defEdgeDash').value = dashArrayToName(e.strokeDasharray || '');
 
-            // Wire buttons
-            document.getElementById('btnDefaultsSave').onclick = () => {
+            // Autosave on change (no explicit Save button)
+            const commitDefaults = () => {
                 const next = {
                     node: {
                         type: document.getElementById('defNodeType').value || 'process',
@@ -4209,8 +4259,15 @@
                 };
                 appSettings.defaults = next;
                 saveAppSettingsSilent();
-                showMessage('Defaults saved', 'success');
+                // Soft toast without distraction
+                showMessage('Defaults updated', 'info');
             };
+            ['defNodeType', 'defNodeW', 'defNodeH', 'defNodeFill', 'defNodeBorderColor', 'defNodeBorderWidth', 'defEdgeStroke', 'defEdgeWidth', 'defEdgeDash']
+                .forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    ['change', 'input'].forEach(evt => el.addEventListener(evt, commitDefaults));
+                });
         }
 
         function clampInt(val, min, max, fallback) {
@@ -6109,6 +6166,9 @@
                         n.dimensions.width = Number(n.dimensions.width) || 0;
                         n.dimensions.height = Number(n.dimensions.height) || 0;
                         if (n.rotation != null) n.rotation = Number(n.rotation) || 0;
+                        if (n.style && n.style.strokeWidth != null) {
+                            n.style.strokeWidth = Number(n.style.strokeWidth) || 0;
+                        }
                     });
                 }
                 if (Array.isArray(out.edges)) {
