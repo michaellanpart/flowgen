@@ -83,19 +83,19 @@ nodes:
     name: Finish
     type: end
     position:
-      x: 666
+      x: 670
       y: 100
     dimensions:
       width: 83
       height: 83
     style:
       fill: '#2ECC71'
-  - id: connector_1758492243168_step_1758799873935
+  - id: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758800296291
     name: New Step
     type: process
     position:
-      x: 750
-      y: 318
+      x: 658
+      y: 253
     dimensions:
       width: 120
       height: 60
@@ -183,18 +183,19 @@ edges:
       stroke: '#a9adb1'
       strokeWidth: 1
       strokeDasharray: 6,2
-  - id: connector_1758492243168-connector_1758492243168_step_1758799873935-1758799873937
+  - id: connector_1758492243168_step_1758498517717_step_1758503642983-connector_1758492243168_step_1758498517717_step_1758503642983_step_1758800296291-1758800296294
     name: ""
     type: ""
-    from: connector_1758492243168
-    to: connector_1758492243168_step_1758799873935
+    from: connector_1758492243168_step_1758498517717_step_1758503642983
+    to: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758800296291
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
 layout:
   direction: top-bottom
   spacing:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-25T06:31:34.591463-05:00
+updated: 2025-09-25T06:38:48.35866-05:00

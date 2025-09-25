@@ -110,6 +110,9 @@
                     </div>
                 </div>
             </div>
+            <div class="nav-dropdown" id="navDefaultsDd">
+                <button class="nav-btn" onclick="openDefaultsPanel(event)">Defaults…</button>
+            </div>
         </div>
         <div class="nav-spacer"></div>
         <div class="nav-section">
@@ -560,6 +563,15 @@
             const isOpen = dd.classList.contains('open');
             document.querySelectorAll('.nav-dropdown').forEach(el => el.classList.remove('open'));
             if (!isOpen) dd.classList.add('open');
+        }
+        function openDefaultsPanel(event) {
+            if (event) event.stopPropagation();
+            // Lock open info panel and populate with Defaults form
+            const panel = document.getElementById('infoPanel');
+            if (panel) panel.classList.add('temp-open');
+            renderDefaultsPanel();
+            // Close any open dropdowns
+            document.querySelectorAll('.nav-dropdown').forEach(el => el.classList.remove('open'));
         }
         document.addEventListener('click', () => {
             document.querySelectorAll('.nav-dropdown').forEach(el => el.classList.remove('open'));
@@ -3769,7 +3781,11 @@
                                         from: srcId,
                                         to: dstId,
                                         name: '',
-                                        style: { stroke: '#34495e', strokeWidth: 2 },
+                                        style: {
+                                            stroke: appSettings?.defaults?.edge?.stroke || '#34495e',
+                                            strokeWidth: appSettings?.defaults?.edge?.strokeWidth ?? 2,
+                                            ...(appSettings?.defaults?.edge?.strokeDasharray ? { strokeDasharray: appSettings.defaults.edge.strokeDasharray } : {})
+                                        },
                                         metadata: {}
                                     };
                                     currentDiagram.edges.push(newEdge);
@@ -4050,7 +4066,23 @@
             inlineLabelEditingEnabled: true,
             onCanvasToolbarEnabled: false,
             // Connector routing: 'straight' (direct lines) or 'orthogonal' (90-degree turns)
-            connectorRouting: 'straight'
+            connectorRouting: 'straight',
+            // Defaults for newly added items
+            defaults: {
+                node: {
+                    type: 'process',
+                    width: 120,
+                    height: 60,
+                    fill: '#3498db',
+                    borderColor: '#1f2937',
+                    borderWidth: 2
+                },
+                edge: {
+                    stroke: '#34495e',
+                    strokeWidth: 2,
+                    strokeDasharray: ''
+                }
+            }
         };
         let appSettings = { ...defaultAppSettings };
 
@@ -4106,6 +4138,105 @@
             if (sizeEl) sizeEl.value = appSettings.gridSize;
             if (colorEl) colorEl.value = appSettings.gridColor || '#bdc3c7';
             if (opacityEl) opacityEl.value = appSettings.gridOpacity ?? 0.3;
+        }
+
+        // ===== Defaults Panel =====
+        function renderDefaultsPanel() {
+            const body = document.getElementById('infoPanelBody');
+            if (!body) return;
+            const d = (appSettings.defaults || {});
+            const n = d.node || {};
+            const e = d.edge || {};
+            const html = `
+                <div class="info-section">
+                    <h3 class="editor-header">⚙️ Defaults for New Items</h3>
+                    <div class="editor-group">
+                        <label style="font-weight:600;">New Node</label>
+                        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;">
+                            <span>Type</span>
+                            <select id="defNodeType">
+                                <option value="process">Process</option>
+                                <option value="start">Start</option>
+                                <option value="end">End</option>
+                                <option value="decision">Decision</option>
+                                <option value="data">Data</option>
+                                <option value="connector">Connector</option>
+                            </select>
+                            <span>Width</span>
+                            <input type="number" id="defNodeW" min="40" max="600" step="5" />
+                            <span>Height</span>
+                            <input type="number" id="defNodeH" min="30" max="400" step="5" />
+                            <span>Fill</span>
+                            <input type="color" id="defNodeFill" />
+                            <span>Border Color</span>
+                            <input type="color" id="defNodeBorderColor" />
+                            <span>Border Width</span>
+                            <input type="number" id="defNodeBorderWidth" min="0" max="10" step="1" />
+                        </div>
+                    </div>
+                    <div class="editor-group" style="margin-top:16px;">
+                        <label style="font-weight:600;">New Connector</label>
+                        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;">
+                            <span>Stroke</span>
+                            <input type="color" id="defEdgeStroke" />
+                            <span>Width</span>
+                            <input type="number" id="defEdgeWidth" min="1" max="20" step="1" />
+                            <span>Dash</span>
+                            <input type="text" id="defEdgeDash" placeholder="e.g. 4,2" />
+                        </div>
+                    </div>
+                    <div class="editor-group" style="margin-top:16px;display:flex;gap:8px;">
+                        <button class="btn btn-sm btn-outline-secondary" id="btnDefaultsReset">Reset</button>
+                        <button class="btn btn-sm btn-outline-primary" id="btnDefaultsSave">Save Defaults</button>
+                    </div>
+                    <div style="font-size:11px;color:#6b7280;margin-top:8px;">These apply to newly added nodes/connectors only. Existing items are unchanged.</div>
+                </div>
+            `;
+            body.innerHTML = html;
+            // Populate values
+            document.getElementById('defNodeType').value = n.type || 'process';
+            document.getElementById('defNodeW').value = n.width ?? 120;
+            document.getElementById('defNodeH').value = n.height ?? 60;
+            document.getElementById('defNodeFill').value = n.fill || '#3498db';
+            document.getElementById('defNodeBorderColor').value = n.borderColor || '#1f2937';
+            document.getElementById('defNodeBorderWidth').value = n.borderWidth ?? 2;
+            document.getElementById('defEdgeStroke').value = e.stroke || '#34495e';
+            document.getElementById('defEdgeWidth').value = e.strokeWidth ?? 2;
+            document.getElementById('defEdgeDash').value = e.strokeDasharray || '';
+
+            // Wire buttons
+            document.getElementById('btnDefaultsReset').onclick = () => {
+                appSettings.defaults = JSON.parse(JSON.stringify(defaultAppSettings.defaults));
+                saveAppSettingsSilent();
+                renderDefaultsPanel();
+                showMessage('Defaults reset', 'success');
+            };
+            document.getElementById('btnDefaultsSave').onclick = () => {
+                const next = {
+                    node: {
+                        type: document.getElementById('defNodeType').value || 'process',
+                        width: clampInt(document.getElementById('defNodeW').value, 40, 600, 120),
+                        height: clampInt(document.getElementById('defNodeH').value, 30, 400, 60),
+                        fill: document.getElementById('defNodeFill').value || '#3498db',
+                        borderColor: document.getElementById('defNodeBorderColor').value || '#1f2937',
+                        borderWidth: clampInt(document.getElementById('defNodeBorderWidth').value, 0, 10, 2)
+                    },
+                    edge: {
+                        stroke: document.getElementById('defEdgeStroke').value || '#34495e',
+                        strokeWidth: clampInt(document.getElementById('defEdgeWidth').value, 1, 20, 2),
+                        strokeDasharray: (document.getElementById('defEdgeDash').value || '').trim()
+                    }
+                };
+                appSettings.defaults = next;
+                saveAppSettingsSilent();
+                showMessage('Defaults saved', 'success');
+            };
+        }
+
+        function clampInt(val, min, max, fallback) {
+            const n = parseInt(val, 10);
+            if (isNaN(n)) return fallback;
+            return Math.max(min, Math.min(max, n));
         }
 
         // Keep ribbon grid controls in sync with app settings
@@ -4326,14 +4457,14 @@
             const diagramX = snapped.x + 50;
             const diagramY = snapped.y + 50;
 
-            const t = newType || 'process';
+            const t = newType || (appSettings?.defaults?.node?.type || 'process');
             const newNode = {
                 id: newId,
                 name: 'New Step',
                 type: t,
                 position: { x: diagramX, y: diagramY },
-                dimensions: { width: defaultW, height: defaultH },
-                style: { fill: getNodeTypeColor(t) }
+                dimensions: { width: appSettings?.defaults?.node?.width ?? defaultW, height: appSettings?.defaults?.node?.height ?? defaultH },
+                style: { fill: appSettings?.defaults?.node?.fill || getNodeTypeColor(t) }
             };
             currentDiagram.nodes.push(newNode);
 
@@ -4344,7 +4475,11 @@
                 from: sourceNodeId,
                 to: newId,
                 name: '',
-                style: { stroke: '#34495e', strokeWidth: 2 },
+                style: {
+                    stroke: appSettings?.defaults?.edge?.stroke || '#34495e',
+                    strokeWidth: appSettings?.defaults?.edge?.strokeWidth ?? 2,
+                    ...(appSettings?.defaults?.edge?.strokeDasharray ? { strokeDasharray: appSettings.defaults.edge.strokeDasharray } : {})
+                },
                 metadata: {}
             };
             currentDiagram.edges.push(edge);
@@ -4371,7 +4506,7 @@
         // or adds to the right of the last selected node (if any), else near top-left.
         async function quickAddNode() {
             const typeSel = document.getElementById('insertNodeType');
-            const t = typeSel ? (typeSel.value || 'process') : 'process';
+            const t = typeSel ? (typeSel.value || (appSettings?.defaults?.node?.type || 'process')) : (appSettings?.defaults?.node?.type || 'process');
             if (!currentDiagram) {
                 // Create a new empty diagram shell if none exists yet
                 currentDiagram = { id: 'untitled', name: 'Untitled', version: '1.0.0', nodes: [], edges: [], layout: { direction: 'top-bottom' } };
@@ -4381,8 +4516,8 @@
             const centerX = 200, centerY = 120;
             const pos = { x: centerX + 50, y: centerY + 50 };
             const id = `${t}_${Date.now()}`;
-            const dims = t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? { width: 100, height: 100 } : { width: 120, height: 60 };
-            const node = { id, name: 'New Step', type: t, position: pos, dimensions: dims, style: { fill: getNodeTypeColor(t) } };
+            const dims = { width: appSettings?.defaults?.node?.width ?? (t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? 100 : 120), height: appSettings?.defaults?.node?.height ?? (t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? 100 : 60) };
+            const node = { id, name: 'New Step', type: t, position: pos, dimensions: dims, style: { fill: appSettings?.defaults?.node?.fill || getNodeTypeColor(t) } };
             currentDiagram.nodes.push(node);
             renderFlowchart(currentDiagram);
             updateConnections();
@@ -4402,7 +4537,7 @@
                 // Ignore if double-clicking an existing node or UI element
                 if (e.target.closest('.node') || e.target.closest('.ribbon') || e.target.closest('.modal')) return;
                 const typeSel = document.getElementById('insertNodeType');
-                const t = typeSel ? (typeSel.value || 'process') : 'process';
+                const t = typeSel ? (typeSel.value || (appSettings?.defaults?.node?.type || 'process')) : (appSettings?.defaults?.node?.type || 'process');
                 if (!currentDiagram) currentDiagram = { id: 'untitled', name: 'Untitled', version: '1.0.0', nodes: [], edges: [], layout: { direction: 'top-bottom' } };
                 const rect = display.getBoundingClientRect();
                 const x = (e.clientX - rect.left) / (zoomScale || 1);
@@ -4410,8 +4545,8 @@
                 // Convert to diagram coords (+padding)
                 const pos = { x: Math.round(x) + 50, y: Math.round(y) + 50 };
                 const id = `${t}_${Date.now()}`;
-                const dims = t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? { width: 100, height: 100 } : { width: 120, height: 60 };
-                const node = { id, name: 'New Step', type: t, position: pos, dimensions: dims, style: { fill: getNodeTypeColor(t) } };
+                const dims = { width: appSettings?.defaults?.node?.width ?? (t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? 100 : 120), height: appSettings?.defaults?.node?.height ?? (t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? 100 : 60) };
+                const node = { id, name: 'New Step', type: t, position: pos, dimensions: dims, style: { fill: appSettings?.defaults?.node?.fill || getNodeTypeColor(t) } };
                 currentDiagram.nodes.push(node);
                 renderFlowchart(currentDiagram);
                 updateConnections();
