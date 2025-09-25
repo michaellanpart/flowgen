@@ -161,7 +161,7 @@
                 Settings</div>
 
             <div class="accordion" id="nodeEditorAccordion">
-                <!-- Basic -->
+                <!-- Basic (reduced) -->
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingBasic">
                         <button class="accordion-button" type="button" data-bs-toggle="collapse"
@@ -170,10 +170,6 @@
                     </h2>
                     <div id="collapseBasic" class="accordion-collapse collapse show" aria-labelledby="headingBasic">
                         <div class="accordion-body">
-                            <div class="editor-group">
-                                <label for="nodeName">Name:</label>
-                                <input type="text" id="nodeName" placeholder="Enter node name">
-                            </div>
                             <div class="editor-group">
                                 <label for="nodeType">Type & Shape:</label>
                                 <select id="nodeType" onchange="updateShapePreview()">
@@ -299,46 +295,7 @@
                     </div>
                 </div>
 
-                <!-- Size -->
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingSize">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseSize" aria-expanded="false" aria-controls="collapseSize">📏
-                            Size</button>
-                    </h2>
-                    <div id="collapseSize" class="accordion-collapse collapse" aria-labelledby="headingSize">
-                        <div class="accordion-body">
-                            <div class="compact-row">
-                                <div class="editor-group">
-                                    <label for="nodeWidth">Width (px):</label>
-                                    <input type="number" id="nodeWidth" min="50" max="300" step="10" value="100">
-                                </div>
-                                <div class="editor-group">
-                                    <label for="nodeHeight">Height (px):</label>
-                                    <input type="number" id="nodeHeight" min="30" max="200" step="10" value="50">
-                                </div>
-                            </div>
-                            <div class="editor-group">
-                                <label>Quick Sizes:</label>
-                                <div class="d-flex gap-1 mt-1">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        onclick="setSize(80, 40)">Small</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        onclick="setSize(100, 50)">Medium</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        onclick="setSize(140, 70)">Large</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        onclick="setSize(100, 100)">Square</button>
-                                </div>
-                            </div>
-                            <div class="editor-group">
-                                <label>Auto-Resize:</label>
-                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 3px;">Text now auto-sizes the
-                                    node while you type</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Size removed: handled inline via resize handles; Name edited inline on the shape -->
             </div>
 
             <div class="editor-buttons">
@@ -2633,13 +2590,10 @@
             // Ensure editor is docked inside the Info Panel
             dockNodeEditor();
 
-            // Populate form with current values
-            document.getElementById('nodeName').value = node.name || '';
+            // Populate form with current values (name edited inline, so no field)
             document.getElementById('nodeType').value = node.type || 'process';
             document.getElementById('nodeRotation').value = node.rotation || 0;
             document.getElementById('rotationValue').textContent = (node.rotation || 0) + '°';
-            document.getElementById('nodeWidth').value = node.dimensions?.width || 100;
-            document.getElementById('nodeHeight').value = node.dimensions?.height || 50;
             document.getElementById('textAlign').value = node.textAlign || 'center';
             // Populate border controls
             const bcEl = document.getElementById('nodeBorderColor');
@@ -2721,23 +2675,14 @@
 
             // Enforce square inputs for decision nodes during editing
             const typeEl = document.getElementById('nodeType');
-            const wEl = document.getElementById('nodeWidth');
-            const hEl = document.getElementById('nodeHeight');
+            const wEl = null;
+            const hEl = null;
 
             function applySquareLockForDecision() {
                 if (typeEl.value === 'decision') {
-                    // sync values immediately
-                    const size = Math.max(parseInt(wEl.value || '0', 10) || 0, parseInt(hEl.value || '0', 10) || 0);
-                    const finalSize = size > 0 ? size : (editingNode.dimensions?.width || 100);
-                    wEl.value = finalSize;
-                    hEl.value = finalSize;
-                    // bind mirroring
-                    wEl.oninput = () => { hEl.value = wEl.value; };
-                    hEl.oninput = () => { wEl.value = hEl.value; };
+                    // Size handled via resize handles; no inputs to mirror
                 } else {
-                    // remove mirroring
-                    wEl.oninput = null;
-                    hEl.oninput = null;
+                    // nothing
                 }
             }
 
@@ -2784,11 +2729,11 @@
             if (!editingNode || !editingNodeElement) return;
 
             // Get form values
-            const newName = document.getElementById('nodeName').value;
+            const newName = editingNode.name; // inline-edited on shape
             const newType = document.getElementById('nodeType').value;
             const newRotation = parseInt(document.getElementById('nodeRotation').value);
-            let newWidth = parseInt(document.getElementById('nodeWidth').value);
-            let newHeight = parseInt(document.getElementById('nodeHeight').value);
+            let newWidth = editingNode.dimensions?.width || 100;
+            let newHeight = editingNode.dimensions?.height || 50;
             // Diamonds must be square: force equal dimensions
             if (newType === 'decision') {
                 const size = Math.max(newWidth || 0, newHeight || 0);
@@ -2824,11 +2769,11 @@
             editingNode.dimensions = editingNode.dimensions || {};
 
             // Determine if user changed dimensions in this edit
-            const oldWidth = editingNode.dimensions.width || 100;
-            const oldHeight = editingNode.dimensions.height || 50;
-            const sizeChanged = (oldWidth !== newWidth || oldHeight !== newHeight);
+            const oldWidth = editingNode.dimensions?.width || 100;
+            const oldHeight = editingNode.dimensions?.height || 50;
+            const sizeChanged = false; // size changes come from inline resize, not the panel
 
-            // Always apply requested dimensions from the editor
+            // Keep existing dimensions (managed by inline resize/auto-resize)
             editingNode.dimensions.width = newWidth;
             editingNode.dimensions.height = newHeight;
             // Diamonds must remain square
@@ -2838,9 +2783,7 @@
                 editingNode.dimensions.height = size;
             }
             // If size changed, mark as manual so future renders won't auto-resize over it
-            if (sizeChanged) {
-                editingNode.manualSize = true;
-            }
+            // manualSize is controlled by resize handles/auto sizing
 
             editingNode.style = editingNode.style || {};
             editingNode.style.fill = newColor;
@@ -2883,9 +2826,9 @@
             // Update colors
             const style = node.style || {};
             nodeElement.style.backgroundColor = style.fill || getNodeTypeColor(node.type);
-            // Pull defaults from configuration for border if not explicitly set on the node
-            const defaultBorderWidth = (appSettings?.defaults?.node?.borderWidth ?? 2);
-            const defaultBorderColor = (appSettings?.defaults?.node?.borderColor ?? '#333');
+            // Rendering fallbacks only (do not pull from appSettings.defaults to avoid retroactive changes)
+            const defaultBorderWidth = 2;
+            const defaultBorderColor = '#333';
             // Determine border width: respect explicit 0 (no border); otherwise use configured default
             let strokeWidth;
             if (style && Object.prototype.hasOwnProperty.call(style, 'strokeWidth')) {
@@ -3710,9 +3653,9 @@
                 // Apply styling
                 const style = node.style || {};
                 nodeEl.style.backgroundColor = style.fill || getNodeTypeColor(node.type);
-                // Add borders like Render view: if width missing but stroke set, default to 2; respect explicit 0
-                const defaultBorderWidth = (appSettings?.defaults?.node?.borderWidth ?? 2);
-                const defaultBorderColor = (appSettings?.defaults?.node?.borderColor ?? '#333');
+                // Rendering fallback only; do not read appSettings.defaults here to avoid retroactively changing existing items
+                const defaultBorderWidth = 2;
+                const defaultBorderColor = '#333';
                 const borderColor = (style.stroke != null ? style.stroke : defaultBorderColor);
                 let borderWidth;
                 if (Object.prototype.hasOwnProperty.call(style, 'strokeWidth')) {

@@ -39,8 +39,8 @@ nodes:
     name: New Step  3
     type: process
     position:
-      x: 480
-      y: 113
+      x: 482
+      y: 112
     dimensions:
       width: 117
       height: 60
@@ -93,6 +93,19 @@ nodes:
       height: 83
     style:
       fill: '#2ECC71'
+  - id: connector_1758492243168_step_1758806341845
+    name: New Step
+    type: process
+    position:
+      x: 488
+      y: 355
+    dimensions:
+      width: 120
+      height: 60
+    style:
+      fill: '#d5d6d7'
+      stroke: '#515152'
+      strokeWidth: 5
 edges:
   - id: connector_1758492243168-connector_1758492243168_step_1758498517717-1758498517718
     name: ""
@@ -175,10 +188,19 @@ edges:
       stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
+  - id: connector_1758492243168-connector_1758492243168_step_1758806341845-1758806341848
+    name: ""
+    type: ""
+    from: connector_1758492243168
+    to: connector_1758492243168_step_1758806341845
+    style:
+      stroke: '#34495e'
+      strokeWidth: 1
+      strokeDasharray: 6,2
 layout:
   direction: top-bottom
   spacing:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-25T08:11:05.829267-05:00
+updated: 2025-09-25T08:19:31.713821-05:00
