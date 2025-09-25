@@ -94,24 +94,11 @@
                     <div class="nav-menu-item"
                         onclick="(function(){ bulkOpenIntent = true; openBulkEdgeEditorModal(); })()">Format all
                         connectors…</div>
-                    <div class="nav-sep"></div>
-                    <div class="nav-menu-item" style="cursor:default;">
-                        <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:6px;">Info Panel</label>
-                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;">
-                            <input type="radio" name="navInfoPanelMode" id="navInfoModeAuto" value="auto"
-                                onchange="onNavbarInfoPanelModeChange(event)" />
-                            <span>Auto-open on hover</span>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;">
-                            <input type="radio" name="navInfoPanelMode" id="navInfoModeLocked" value="locked"
-                                onchange="onNavbarInfoPanelModeChange(event)" />
-                            <span>Locked open</span>
-                        </label>
-                    </div>
+
                 </div>
             </div>
             <div class="nav-dropdown" id="navDefaultsDd">
-                <button class="nav-btn" onclick="openDefaultsPanel(event)">Defaults…</button>
+                <button class="nav-btn" onclick="openDefaultsPanel(event)">Defaults</button>
             </div>
         </div>
         <div class="nav-spacer"></div>
@@ -145,7 +132,7 @@
                 <aside class="info-panel" id="infoPanel" aria-live="polite">
                     <div class="info-panel-header">
                         <div>
-                            <div id="infoTitle" class="info-title">Diagram Details</div>
+                            <div id="infoTitle" class="info-title"></div>
                             <div id="infoSubtitle" class="info-subtitle"></div>
                         </div>
                     </div>
@@ -251,6 +238,14 @@
                             <div class="editor-group">
                                 <label>Favorites:</label>
                                 <div id="favoriteColors" class="color-grid"></div>
+                            </div>
+                            <div class="editor-group">
+                                <label for="nodeBorderColor">Border Color:</label>
+                                <input type="color" id="nodeBorderColor" value="#1f2937" />
+                            </div>
+                            <div class="editor-group">
+                                <label for="nodeBorderWidth">Border Width (px):</label>
+                                <input type="number" id="nodeBorderWidth" min="0" max="10" step="1" value="2" />
                             </div>
                             <div class="editor-group">
                                 <label for="nodeRotation">Rotation:</label>
@@ -574,10 +569,8 @@
         }
         function openDefaultsPanel(event) {
             if (event) event.stopPropagation();
-            // Lock open info panel and populate with Defaults form
-            const panel = document.getElementById('infoPanel');
-            if (panel) panel.classList.add('temp-open');
-            renderDefaultsPanel();
+            // Open the sliding panel and dock the Defaults UI inside it
+            try { dockDefaultsPanel(); } catch (_) { renderDefaultsPanel(); }
             // Close any open dropdowns
             document.querySelectorAll('.nav-dropdown').forEach(el => el.classList.remove('open'));
         }
@@ -781,49 +774,18 @@
             const panel = document.getElementById('infoPanel');
             const layout = document.querySelector('.diagram-layout');
             if (!panel) return;
-            const tempOpen = panel.classList.contains('temp-open');
-            const mode = (appSettings.infoPanelMode || 'auto');
-            const isOpen = mode === 'locked' ? true : tempOpen;
+            const isOpen = !!editorDocked;
             panel.classList.toggle('collapsed', !isOpen);
             panel.setAttribute('aria-hidden', String(!isOpen));
             if (layout) layout.classList.toggle('no-info-gap', !isOpen);
-            // No handle/toggle element; state is purely visual and via navbar mode
         }
-        function openInfoPanelTemp() {
-            const panel = document.getElementById('infoPanel');
-            if (!panel) return;
-            if ((appSettings.infoPanelMode || 'auto') === 'locked') {
-                // Already open in locked mode; nothing to do
-            } else {
-                panel.classList.add('temp-open');
-            }
-            applyInfoPanelState();
-        }
-        function maybeCloseInfoPanelTemp() {
-            const panel = document.getElementById('infoPanel');
-            if (!panel) return;
-            if (editorDocked) return;
-            if ((appSettings.infoPanelMode || 'auto') === 'locked') return;
-            // Only close if not hovering a node or the panel
-            if (!hoveredNodeEl && !infoPanelHover) {
-                panel.classList.remove('temp-open');
-                applyInfoPanelState();
-            }
-        }
+        function openInfoPanelTemp() { /* disabled hover-open */ }
+        function maybeCloseInfoPanelTemp() { /* disabled hover-close */ }
         // toggleInfoPanel() removed with toggle handle
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize info panel state on load
             applyInfoPanelState();
-            // Track hover to avoid collapsing while interacting with the panel
-            const panel = document.getElementById('infoPanel');
-            if (panel) {
-                panel.addEventListener('mouseenter', () => { infoPanelHover = true; if (infoPanelCloseTimer) { clearTimeout(infoPanelCloseTimer); infoPanelCloseTimer = null; } });
-                panel.addEventListener('mouseleave', () => {
-                    infoPanelHover = false;
-                    if (infoPanelCloseTimer) clearTimeout(infoPanelCloseTimer);
-                    infoPanelCloseTimer = setTimeout(() => { maybeCloseInfoPanelTemp(); }, 150);
-                });
-            }
+            // Hover tracking disabled to avoid unintended opens/closes
 
             // Keep connectors aligned on viewport changes and container scroll
             const display = document.getElementById('flowchartDisplay');
@@ -1650,7 +1612,7 @@
             if (!box) return;
             const d = window.currentDiagram;
             if (!d) {
-                box.innerHTML = '<div style="font-size:12px;color:#7f8c8d;">No diagram loaded</div>';
+                box.innerHTML = '';
                 return;
             }
             const name = d.name || 'Unnamed Diagram';
@@ -1681,34 +1643,44 @@
         function setInfoPanelHeader(title, subtitle = '') {
             const t = document.getElementById('infoTitle');
             const s = document.getElementById('infoSubtitle');
+            if (title === 'Info') title = '';
             if (t) t.textContent = title || '';
             if (s) s.textContent = subtitle || '';
         }
+        // Dock the Defaults UI into the right panel and slide it open
+        function dockDefaultsPanel() {
+            // Undock any existing editors
+            try { undockNodeEditor(); } catch (_) { }
+            try { undockEdgeEditor(); } catch (_) { }
+            const panelBody = document.getElementById('infoPanelBody');
+            if (!panelBody) return;
+            // Render defaults content into the body and mark as docked/open
+            renderDefaultsPanel(true /*docked*/);
+            editorDocked = true;
+            setInfoPanelHeader('', '');
+            applyInfoPanelState();
+        }
+        function undockDefaultsPanel() {
+            const body = document.getElementById('infoPanelBody');
+            if (!body) return;
+            body.innerHTML = '';
+            editorDocked = false;
+            applyInfoPanelState();
+            renderDiagramSummaryInPanel();
+        }
         function renderDiagramSummaryInPanel() {
             const d = window.currentDiagram;
-            if (!d) {
-                setInfoPanelHeader('Info');
-                setInfoPanelBody('<div class="info-section">No diagram loaded. Use File → Open or New to get started.</div>');
-                return;
-            }
+            if (!d) { setInfoPanelHeader('', ''); setInfoPanelBody(''); return; }
             const name = d.name || 'Unnamed Diagram';
             const id = d.id || '';
             const nodes = Array.isArray(d.nodes) ? d.nodes.length : 0;
             const edges = Array.isArray(d.edges) ? d.edges.length : 0;
             const layout = (d.layout && d.layout.direction) ? d.layout.direction : 'top-bottom';
-            setInfoPanelHeader('Info', `${name}${id ? ` · ${id}` : ''}`);
-            setInfoPanelBody(`
-                <div class="info-section">
-                    <div><strong>Overview</strong></div>
-                    <ul class="info-list">
-                        <li>Nodes: <code>${nodes}</code> · Edges: <code>${edges}</code></li>
-                        <li>Layout: <code>${layout}</code></li>
-                    </ul>
-                </div>
-            `);
+            setInfoPanelHeader('', '');
+            setInfoPanelBody('');
         }
         function clearInfoPanelBody() {
-            renderDiagramSummaryInPanel();
+            setInfoPanelHeader('', ''); setInfoPanelBody('');
         }
         function dockNodeEditor() {
             // If edge editor is currently docked, undock it first
@@ -1721,10 +1693,9 @@
             panelBody.appendChild(editor);
             editor.classList.add('docked');
             editorDocked = true;
-            // Use 'Info' as the header, with name · id as subtitle
-            const nm = editingNode?.name || editingNode?.id || '';
-            const id = editingNode?.id || '';
-            setInfoPanelHeader('Info', nm && id && nm !== id ? `${nm} · ${id}` : nm || id || '');
+            // Editing: keep header concise and do not show long name/id in subtitle
+            setInfoPanelHeader('Info', '');
+            applyInfoPanelState();
             // Add a small editing badge to the title for visibility
             try {
                 const titleEl = document.getElementById('infoTitle');
@@ -1744,6 +1715,7 @@
             if (!editor) return;
             editor.classList.remove('docked');
             editorDocked = false;
+            applyInfoPanelState();
             // Nothing to cleanup for Bootstrap Accordion
             // Move the editor back to the root (right before closing body) to keep DOM tidy
             const appRoot = document.querySelector('#infoPanel')?.parentElement || document.body;
@@ -1761,13 +1733,9 @@
             panelBody.appendChild(editor);
             editor.classList.add('docked');
             editorDocked = true;
-            // Header: Info + connector summary subtitle
-            const modal = document.getElementById('edgeEditor');
-            const edgeId = modal?.dataset?.edgeId || '';
-            const edge = (currentDiagram?.edges || []).find(e => (e.id || `${e.from}-${e.to}`) === edgeId);
-            const label = edge?.name || '';
-            const subtitle = edge ? `Connector · ${edge.from} → ${edge.to}${label ? ` · ${label}` : ''}` : 'Connector';
-            setInfoPanelHeader('Info', subtitle);
+            // Header: concise during editing; no long connector summary
+            setInfoPanelHeader('Info', '');
+            applyInfoPanelState();
             // Add Editing badge
             try {
                 const titleEl = document.getElementById('infoTitle');
@@ -1785,6 +1753,7 @@
             if (!editor) return;
             editor.classList.remove('docked');
             editorDocked = false;
+            applyInfoPanelState();
             const appRoot = document.querySelector('#infoPanel')?.parentElement || document.body;
             appRoot.appendChild(editor);
         }
@@ -2014,15 +1983,10 @@
             document.getElementById('edgeStroke').value = style.stroke || '#34495e';
             document.getElementById('edgeWidth').value = style.strokeWidth || 2;
             document.getElementById('edgeDash').value = dashArrayToName(style.strokeDasharray || '');
-            // Auto-open panel if in auto mode and currently collapsed
+            // Ensure panel is open
             const panel = document.getElementById('infoPanel');
-            if (panel && panel.classList.contains('collapsed')) {
-                if ((appSettings.infoPanelMode || 'auto') === 'auto') {
-                    panel.classList.add('temp-open');
-                }
-                applyInfoPanelState();
-                if ((appSettings.infoPanelMode || 'auto') === 'auto') panel.dataset.autoOpened = 'true';
-            }
+            if (panel) panel.classList.add('temp-open');
+            applyInfoPanelState();
             // Dock inside Info Panel
             dockEdgeEditor();
             modal.style.display = 'block';
@@ -2094,13 +2058,7 @@
                 const titleEl = document.getElementById('infoTitle');
                 titleEl?.querySelector('[data-role="editing-badge"]')?.remove();
             } catch (_) { }
-            // If we auto-opened the panel for editing, collapse it back (auto mode only)
-            const panel = document.getElementById('infoPanel');
-            if (panel && panel.dataset.autoOpened === 'true' && (appSettings.infoPanelMode || 'auto') === 'auto') {
-                panel.classList.remove('temp-open');
-                delete panel.dataset.autoOpened;
-                applyInfoPanelState();
-            }
+            // Keep panel open (always-locked)
         }
 
         async function saveEdgeChanges() {
@@ -2679,6 +2637,11 @@
             document.getElementById('nodeWidth').value = node.dimensions?.width || 100;
             document.getElementById('nodeHeight').value = node.dimensions?.height || 50;
             document.getElementById('textAlign').value = node.textAlign || 'center';
+            // Populate border controls
+            const bcEl = document.getElementById('nodeBorderColor');
+            const bwEl = document.getElementById('nodeBorderWidth');
+            if (bcEl) bcEl.value = (node.style?.stroke) || (appSettings?.defaults?.node?.borderColor) || '#1f2937';
+            if (bwEl) bwEl.value = (node.style?.strokeWidth ?? (appSettings?.defaults?.node?.borderWidth ?? 2));
 
             // Set text position buttons
             const textPos = node.textPosition || { horizontal: 'center', vertical: 'center' };
@@ -2846,6 +2809,12 @@
 
             editingNode.style = editingNode.style || {};
             editingNode.style.fill = newColor;
+            // Border style
+            const bc = (document.getElementById('nodeBorderColor') || {}).value || '#1f2937';
+            const bwRaw = (document.getElementById('nodeBorderWidth') || {}).value;
+            const bw = Math.max(0, parseInt(bwRaw, 10) || 0);
+            editingNode.style.stroke = bc;
+            editingNode.style.strokeWidth = bw;
 
             // Update the visual element
             updateNodeVisual(editingNode, editingNodeElement);
@@ -2879,6 +2848,8 @@
             // Update colors
             const style = node.style || {};
             nodeElement.style.backgroundColor = style.fill || getNodeTypeColor(node.type);
+            const strokeWidth = Math.max(0, Number(style.strokeWidth) || 0);
+            const borderColor = (style.stroke || '#333');
 
             // Ensure CSS classes reflect current type (used by affordance styling)
             if ((node.type || '').toLowerCase() === 'decision') {
@@ -2946,16 +2917,17 @@
                     nodeElement.style.transform = `rotate(${node.rotation}deg)`;
                 }
                 // Overlay border for hexagon
-                const borderColor = (style.stroke || '#333');
-                const overlay = document.createElement('div');
-                overlay.className = 'shape-border-overlay';
-                Object.assign(overlay.style, {
-                    position: 'absolute', top: '0', left: '0', right: '0', bottom: '0',
-                    pointerEvents: 'none',
-                    clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-                    boxShadow: `inset 0 0 0 2px ${borderColor}`
-                });
-                nodeElement.appendChild(overlay);
+                if (strokeWidth > 0) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'shape-border-overlay';
+                    Object.assign(overlay.style, {
+                        position: 'absolute', top: '0', left: '0', right: '0', bottom: '0',
+                        pointerEvents: 'none',
+                        clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+                        boxShadow: `inset 0 0 0 ${strokeWidth}px ${borderColor}`
+                    });
+                    nodeElement.appendChild(overlay);
+                }
             } else {
                 // Rectangle for process nodes
                 nodeElement.style.borderRadius = '8px';
@@ -2966,8 +2938,11 @@
 
             // Apply standard border to non-hexagon shapes
             if (node.type !== 'data') {
-                const borderColor = (style.stroke || '#333');
-                nodeElement.style.border = `2px solid ${borderColor}`;
+                if (strokeWidth > 0) {
+                    nodeElement.style.border = `${strokeWidth}px solid ${borderColor}`;
+                } else {
+                    nodeElement.style.border = 'none';
+                }
             }
             // Ensure resize handles reflect the current shape and avoid overlapping connection points
             try { addResizeHandles(nodeElement, node); } catch (_) { /* no-op if not yet in DOM */ }
@@ -3000,6 +2975,10 @@
                         textPadding = Math.round((tPadTop + tPadLeft) / 2);
                     }
                 } catch (_) { /* fallback to defaults */ }
+            } else if (node && node.style && node.type !== 'data') {
+                // Use configured strokeWidth if available when no DOM element is passed
+                const sw = Math.max(0, Number(node.style.strokeWidth) || 0);
+                if (sw > 0) borderWidth = sw;
             }
 
             // Build measurer that mirrors .node-text box (border-box with its own padding only)
@@ -3687,8 +3666,9 @@
                 // Apply styling
                 const style = node.style || {};
                 nodeEl.style.backgroundColor = style.fill || getNodeTypeColor(node.type);
-                // Add dark borders like Render view
+                // Add borders like Render view (respect strokeWidth)
                 const borderColor = (style.stroke || '#333');
+                const borderWidth = Math.max(0, Number(style.strokeWidth) || 0);
                 // Reset any previous borders/overlays
                 nodeEl.style.border = '';
                 const existingOverlay = nodeEl.querySelector('.shape-border-overlay');
@@ -3731,7 +3711,11 @@
 
                 // Apply border to non-hexagon shapes
                 if (node.type !== 'data') {
-                    nodeEl.style.border = `2px solid ${borderColor}`;
+                    if (borderWidth > 0) {
+                        nodeEl.style.border = `${borderWidth}px solid ${borderColor}`;
+                    } else {
+                        nodeEl.style.border = 'none';
+                    }
                 }
 
                 // Add click handler (info when not in edit mode, drag when in edit mode)
@@ -3821,18 +3805,7 @@
                     mouseDownTime = 0;
                 };
 
-                nodeEl.addEventListener('mouseenter', () => {
-                    hoveredNodeEl = nodeEl;
-                    updateInfoPanelForNode(nodeEl);
-                    openInfoPanelTemp();
-                    if (infoPanelCloseTimer) { clearTimeout(infoPanelCloseTimer); infoPanelCloseTimer = null; }
-                });
-                nodeEl.addEventListener('mouseleave', () => {
-                    // Do not clear the info panel on mouse leave; keep last shown info
-                    if (hoveredNodeEl === nodeEl) { hoveredNodeEl = null; }
-                    if (infoPanelCloseTimer) clearTimeout(infoPanelCloseTimer);
-                    infoPanelCloseTimer = setTimeout(() => { maybeCloseInfoPanelTemp(); }, 150);
-                });
+                // Hover-driven info panel disabled
 
                 // Add double-click handler for editing
                 nodeEl.ondblclick = (e) => {
@@ -4070,8 +4043,7 @@
             gridSize: 25,
             gridColor: '#bdc3c7',
             gridOpacity: 0.3,
-            // Info panel: 'auto' (open on hover) or 'locked' (always open)
-            infoPanelMode: 'auto',
+            // Info panel is always locked open now
             // Feature flags: enable inline editing only, keep toolbar off
             inlineLabelEditingEnabled: true,
             onCanvasToolbarEnabled: false,
@@ -4151,7 +4123,7 @@
         }
 
         // ===== Defaults Panel =====
-        function renderDefaultsPanel() {
+        function renderDefaultsPanel(isDocked = false) {
             const body = document.getElementById('infoPanelBody');
             if (!body) return;
             const d = (appSettings.defaults || {});
@@ -4160,6 +4132,7 @@
             const html = `
                 <div class="info-section">
                     <h3 class="editor-header">⚙️ Defaults for New Items</h3>
+                    
                     <div class="editor-group">
                         <label style="font-weight:600;">New Node</label>
                         <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;">
@@ -4200,7 +4173,6 @@
                         </div>
                     </div>
                     <div class="editor-group" style="margin-top:16px;display:flex;gap:8px;">
-                        <button class="btn btn-sm btn-outline-secondary" id="btnDefaultsReset">Reset</button>
                         <button class="btn btn-sm btn-outline-primary" id="btnDefaultsSave">Save Defaults</button>
                     </div>
                     <div style="font-size:11px;color:#6b7280;margin-top:8px;">These apply to newly added nodes/connectors only. Existing items are unchanged.</div>
@@ -4219,12 +4191,6 @@
             document.getElementById('defEdgeDash').value = dashArrayToName(e.strokeDasharray || '');
 
             // Wire buttons
-            document.getElementById('btnDefaultsReset').onclick = () => {
-                appSettings.defaults = JSON.parse(JSON.stringify(defaultAppSettings.defaults));
-                saveAppSettingsSilent();
-                renderDefaultsPanel();
-                showMessage('Defaults reset', 'success');
-            };
             document.getElementById('btnDefaultsSave').onclick = () => {
                 const next = {
                     node: {
@@ -4301,31 +4267,7 @@
             showMessage(`Connector routing: ${appSettings.connectorRouting}`, 'info');
         }
 
-        // ===== Navbar: Info Panel Mode =====
-        function populateNavbarInfoPanelMode() {
-            const auto = document.getElementById('navInfoModeAuto');
-            const locked = document.getElementById('navInfoModeLocked');
-            const mode = appSettings.infoPanelMode || 'auto';
-            if (auto) auto.checked = (mode === 'auto');
-            if (locked) locked.checked = (mode === 'locked');
-        }
-        function onNavbarInfoPanelModeChange(e) {
-            const val = e && e.target ? e.target.value : 'auto';
-            appSettings.infoPanelMode = (val === 'locked') ? 'locked' : 'auto';
-            saveAppSettingsSilent();
-            // When switching to locked, ensure panel is open; when switching to auto, collapse unless editing/hovering
-            const panel = document.getElementById('infoPanel');
-            if (panel) {
-                if (appSettings.infoPanelMode === 'locked') {
-                    panel.classList.add('temp-open');
-                } else {
-                    if (!editorDocked && !hoveredNodeEl && !infoPanelHover) {
-                        panel.classList.remove('temp-open');
-                    }
-                }
-            }
-            applyInfoPanelState();
-        }
+        // Navbar Info Panel mode removed; panel is always open.
 
         // Dropdown open/close logic for Grid
         function toggleGridDropdown(event) {
@@ -4413,7 +4355,6 @@
             loadAppSettings();
             populateRibbonGridControls();
             populateNavbarGridControls();
-            populateNavbarInfoPanelMode();
             populateNavbarConnectorRouting();
             // Force grid and snapping off by default (override any older saved setting)
             appSettings.gridEnabled = false;
@@ -4427,12 +4368,9 @@
             try { initColorPickerControls(); renderFavoriteColors(); } catch (_) { }
             // Initialize info panel with a diagram summary
             renderDiagramSummaryInPanel();
-            // If locked mode, mark as open immediately
-            if ((appSettings.infoPanelMode || 'auto') === 'locked') {
-                const panel = document.getElementById('infoPanel');
-                if (panel) panel.classList.add('temp-open');
-            }
-            // Ensure visual state reflects mode
+            // Ensure Info Panel is always open
+            const panel = document.getElementById('infoPanel');
+            if (panel) panel.classList.add('temp-open');
             applyInfoPanelState();
         });
 
@@ -4478,7 +4416,11 @@
                 type: t,
                 position: { x: diagramX, y: diagramY },
                 dimensions: { width: appSettings?.defaults?.node?.width ?? defaultW, height: appSettings?.defaults?.node?.height ?? defaultH },
-                style: { fill: appSettings?.defaults?.node?.fill || getNodeTypeColor(t) }
+                style: {
+                    fill: appSettings?.defaults?.node?.fill || getNodeTypeColor(t),
+                    stroke: appSettings?.defaults?.node?.borderColor || '#1f2937',
+                    strokeWidth: appSettings?.defaults?.node?.borderWidth ?? 2
+                }
             };
             currentDiagram.nodes.push(newNode);
 
@@ -4531,7 +4473,7 @@
             const pos = { x: centerX + 50, y: centerY + 50 };
             const id = `${t}_${Date.now()}`;
             const dims = { width: appSettings?.defaults?.node?.width ?? (t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? 100 : 120), height: appSettings?.defaults?.node?.height ?? (t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? 100 : 60) };
-            const node = { id, name: 'New Step', type: t, position: pos, dimensions: dims, style: { fill: appSettings?.defaults?.node?.fill || getNodeTypeColor(t) } };
+            const node = { id, name: 'New Step', type: t, position: pos, dimensions: dims, style: { fill: appSettings?.defaults?.node?.fill || getNodeTypeColor(t), stroke: appSettings?.defaults?.node?.borderColor || '#1f2937', strokeWidth: appSettings?.defaults?.node?.borderWidth ?? 2 } };
             currentDiagram.nodes.push(node);
             renderFlowchart(currentDiagram);
             updateConnections();
@@ -4560,7 +4502,7 @@
                 const pos = { x: Math.round(x) + 50, y: Math.round(y) + 50 };
                 const id = `${t}_${Date.now()}`;
                 const dims = { width: appSettings?.defaults?.node?.width ?? (t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? 100 : 120), height: appSettings?.defaults?.node?.height ?? (t === 'decision' || t === 'start' || t === 'end' || t === 'connector' ? 100 : 60) };
-                const node = { id, name: 'New Step', type: t, position: pos, dimensions: dims, style: { fill: appSettings?.defaults?.node?.fill || getNodeTypeColor(t) } };
+                const node = { id, name: 'New Step', type: t, position: pos, dimensions: dims, style: { fill: appSettings?.defaults?.node?.fill || getNodeTypeColor(t), stroke: appSettings?.defaults?.node?.borderColor || '#1f2937', strokeWidth: appSettings?.defaults?.node?.borderWidth ?? 2 } };
                 currentDiagram.nodes.push(node);
                 renderFlowchart(currentDiagram);
                 updateConnections();
