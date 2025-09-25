@@ -55,6 +55,8 @@
                         </label>
                     </div>
                     <div class="nav-sep"></div>
+                    <div class="nav-menu-item" onclick="openBulkEdgeEditorModal()">Format all connectors…</div>
+                    <div class="nav-sep"></div>
                     <div class="nav-menu-item" style="cursor:default;">
                         <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:6px;">Info Panel</label>
                         <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;">
@@ -410,6 +412,36 @@
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeSaveAsModal()">Cancel</button>
                 <button class="btn-save" onclick="performSaveAs()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Edge Formatter Modal -->
+    <div id="bulkEdgeEditorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">🎨 Format All Connectors</div>
+            <div class="modal-body">
+                <div class="compact-row">
+                    <div class="editor-group">
+                        <label for="bulkEdgeStroke">Stroke Color:</label>
+                        <input type="color" id="bulkEdgeStroke" value="#34495e" />
+                    </div>
+                    <div class="editor-group">
+                        <label for="bulkEdgeWidth">Width (px):</label>
+                        <input type="number" id="bulkEdgeWidth" min="1" max="10" step="1" value="2" />
+                    </div>
+                </div>
+                <div class="editor-group">
+                    <label for="bulkEdgeDash">Dash Pattern:</label>
+                    <input type="text" id="bulkEdgeDash" placeholder="e.g. 4,2 for dashed (leave empty for solid)" />
+                </div>
+                <div style="font-size: 12px; color:#6b7280;">
+                    This will overwrite stroke color, width, and dash pattern on all connectors in the diagram.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeBulkEdgeEditorModal()">Cancel</button>
+                <button class="btn-save" onclick="applyBulkEdgeFormatting()">Apply to All</button>
             </div>
         </div>
     </div>
@@ -1908,6 +1940,80 @@
             closeEdgeEditor();
             selectedEdgeId = edgeId;
             deleteSelectedEdge();
+        }
+
+        // ===== Bulk connector operations =====
+        function selectAllConnectors() {
+            // Ensure connections are drawn
+            try { updateConnections(); } catch (_) { }
+            // Clear single-edge selection state
+            selectedEdgeId = null;
+            // Select all line segments, arrowheads, and label backgrounds
+            const display = document.getElementById('flowchartDisplay');
+            if (!display) return;
+            display.querySelectorAll('line.connection-line, polygon.connection-arrowhead, rect.connection-label-bg')
+                .forEach(el => el.classList.add('selected'));
+            showMessage('All connectors selected', 'info');
+        }
+
+        function openBulkEdgeEditorModal() {
+            if (!currentDiagram || !Array.isArray(currentDiagram.edges) || currentDiagram.edges.length === 0) {
+                showMessage('No connectors to format', 'info');
+                return;
+            }
+            // Visually select all connectors before opening the modal for clear context
+            try { selectAllConnectors(); } catch (_) { }
+            // Prefill with first edge style as a convenience
+            const e0 = currentDiagram.edges[0] || {};
+            const s0 = (e0.style || {});
+            const stroke = s0.stroke || '#34495e';
+            const width = (typeof s0.strokeWidth === 'number' && s0.strokeWidth > 0) ? s0.strokeWidth : 2;
+            const dash = s0.strokeDasharray || '';
+            const strokeEl = document.getElementById('bulkEdgeStroke');
+            const widthEl = document.getElementById('bulkEdgeWidth');
+            const dashEl = document.getElementById('bulkEdgeDash');
+            if (strokeEl) strokeEl.value = stroke;
+            if (widthEl) widthEl.value = width;
+            if (dashEl) dashEl.value = dash;
+            const modal = document.getElementById('bulkEdgeEditorModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeBulkEdgeEditorModal() {
+            const modal = document.getElementById('bulkEdgeEditorModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function applyBulkEdgeFormatting() {
+            if (!currentDiagram || !Array.isArray(currentDiagram.edges) || currentDiagram.edges.length === 0) {
+                showMessage('No connectors to format', 'info');
+                closeBulkEdgeEditorModal();
+                return;
+            }
+            const strokeEl = document.getElementById('bulkEdgeStroke');
+            const widthEl = document.getElementById('bulkEdgeWidth');
+            const dashEl = document.getElementById('bulkEdgeDash');
+            const stroke = (strokeEl && strokeEl.value) ? strokeEl.value : '#34495e';
+            const widthV = widthEl ? parseFloat(widthEl.value) : 2;
+            const width = isNaN(widthV) ? 2 : Math.max(1, Math.min(20, widthV));
+            const dash = (dashEl && (dashEl.value || '').trim()) || '';
+
+            currentDiagram.edges.forEach(e => {
+                e.style = e.style || {};
+                e.style.stroke = stroke;
+                e.style.strokeWidth = width;
+                if (dash) e.style.strokeDasharray = dash; else delete e.style.strokeDasharray;
+            });
+
+            hasUnsavedChanges = true;
+            const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
+            scheduleAutoSave();
+            // Silent immediate save and redraw
+            saveDiagram(true);
+            updateConnections();
+            updateDiagramInfoBox();
+            closeBulkEdgeEditorModal();
+            showMessage('Applied formatting to all connectors', 'success');
         }
 
         // Edge creation interactions
@@ -4715,9 +4821,10 @@
                 line.setAttribute('y2', pathPoints[1].y);
                 line.setAttribute('class', 'connection-line');
                 line.setAttribute('data-edge-id', edgeId);
-                line.setAttribute('stroke', style.stroke);
-                line.setAttribute('stroke-width', style.strokeWidth);
-                if (style.strokeDasharray) line.setAttribute('stroke-dasharray', style.strokeDasharray);
+                // Use inline styles to ensure they override stylesheet defaults
+                line.style.stroke = style.stroke;
+                line.style.strokeWidth = String(style.strokeWidth);
+                if (style.strokeDasharray) line.style.strokeDasharray = String(style.strokeDasharray);
                 // Interactivity
                 line.style.cursor = 'pointer';
                 line.addEventListener('click', (ev) => {
@@ -4738,9 +4845,10 @@
                     line.setAttribute('y2', pathPoints[i + 1].y);
                     line.setAttribute('class', 'connection-line');
                     line.setAttribute('data-edge-id', edgeId);
-                    line.setAttribute('stroke', style.stroke);
-                    line.setAttribute('stroke-width', style.strokeWidth);
-                    if (style.strokeDasharray) line.setAttribute('stroke-dasharray', style.strokeDasharray);
+                    // Inline style overrides for stroke, width, and dash
+                    line.style.stroke = style.stroke;
+                    line.style.strokeWidth = String(style.strokeWidth);
+                    if (style.strokeDasharray) line.style.strokeDasharray = String(style.strokeDasharray);
                     // Interactivity - each segment should be clickable
                     line.style.cursor = 'pointer';
                     line.addEventListener('click', (ev) => {
