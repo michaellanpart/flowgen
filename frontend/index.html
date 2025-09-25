@@ -91,7 +91,9 @@
                         </label>
                     </div>
                     <div class="nav-sep"></div>
-                    <div class="nav-menu-item" onclick="openBulkEdgeEditorModal()">Format all connectors…</div>
+                    <div class="nav-menu-item"
+                        onclick="(function(){ bulkOpenIntent = true; openBulkEdgeEditorModal(); })()">Format all
+                        connectors…</div>
                     <div class="nav-sep"></div>
                     <div class="nav-menu-item" style="cursor:default;">
                         <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:6px;">Info Panel</label>
@@ -537,6 +539,8 @@
         let gridOpacity = 0.3;
         let selectedNodeElement = null;
         let selectedEdgeId = null;
+        // Guard so bulk connector editor only opens from explicit nav click
+        let bulkOpenIntent = false;
         // Remember last-used connector sides per edge to reduce jitter while dragging
         const edgeRoutingState = new Map(); // edgeId -> { fromSide, toSide }
         // Edge creation state: { sourceNodeId, sourceSide, startX, startY, previewLine }
@@ -2002,6 +2006,59 @@
             // Dock inside Info Panel
             dockEdgeEditor();
             modal.style.display = 'block';
+
+            // Live preview bindings: reflect changes immediately in the diagram
+            try {
+                const nameEl = document.getElementById('edgeName');
+                const techEl = document.getElementById('edgeTechnology');
+                const strokeEl = document.getElementById('edgeStroke');
+                const widthEl = document.getElementById('edgeWidth');
+                const dashEl = document.getElementById('edgeDash');
+
+                let liveTimer = null;
+                const applyLive = () => {
+                    const id = modal.dataset.edgeId;
+                    const e = currentDiagram?.edges?.find(x => (x.id || `${x.from}-${x.to}`) === id);
+                    if (!e) return;
+                    // Update fields on the edge
+                    e.name = nameEl?.value || '';
+                    e.metadata = e.metadata || {};
+                    if (techEl) e.metadata.technology = techEl.value || undefined;
+                    e.style = e.style || {};
+                    if (strokeEl) e.style.stroke = strokeEl.value || '#34495e';
+                    if (widthEl) {
+                        const w = parseFloat(widthEl.value);
+                        e.style.strokeWidth = isNaN(w) ? 2 : w;
+                    }
+                    if (dashEl) {
+                        const dash = (dashEl.value || '').trim();
+                        if (dash) e.style.strokeDasharray = dash; else delete e.style.strokeDasharray;
+                    }
+                    // Mark dirty, update visuals, and let autosave handle persistence
+                    hasUnsavedChanges = true;
+                    const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
+                    updateConnections();
+                    // Debounce autosave to avoid saving on every keystroke
+                    if (liveTimer) clearTimeout(liveTimer);
+                    updateAutosaveStatus('pending');
+                    liveTimer = setTimeout(() => {
+                        updateAutosaveStatus('saving');
+                        saveDiagram(true);
+                        liveTimer = null;
+                    }, 600);
+                };
+
+                const bind = (el, evts) => {
+                    if (!el || el._liveBound) return;
+                    evts.forEach(evt => el.addEventListener(evt, applyLive));
+                    el._liveBound = true;
+                };
+                bind(nameEl, ['input', 'change']);
+                bind(techEl, ['input', 'change']);
+                bind(strokeEl, ['input', 'change']);
+                bind(widthEl, ['input', 'change']);
+                bind(dashEl, ['input', 'change']);
+            } catch (_) { /* non-fatal */ }
         }
 
         function closeEdgeEditor() {
@@ -2025,7 +2082,7 @@
             }
         }
 
-        function saveEdgeChanges() {
+        async function saveEdgeChanges() {
             const modal = document.getElementById('edgeEditor');
             const edgeId = modal.dataset.edgeId;
             const edge = currentDiagram?.edges?.find(e => (e.id || `${e.from}-${e.to}`) === edgeId);
@@ -2041,10 +2098,10 @@
             const dash = (document.getElementById('edgeDash').value || '').trim();
             edge.style.strokeDasharray = dash || undefined;
             hasUnsavedChanges = true;
-            document.getElementById('saveButton').classList.add('show');
+            const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
             scheduleAutoSave();
-            // Immediate silent autosave for editor-based edge updates
-            saveDiagram(true);
+            // Immediate forced silent autosave for editor-based edge updates
+            await saveDiagram(true, true);
             closeEdgeEditor();
             updateConnections();
             showMessage('Connector updated', 'success');
@@ -2073,6 +2130,9 @@
         }
 
         function openBulkEdgeEditorModal() {
+            // Only allow open when explicitly triggered via nav/menu click
+            if (!bulkOpenIntent) { return; }
+            bulkOpenIntent = false;
             if (!currentDiagram || !Array.isArray(currentDiagram.edges) || currentDiagram.edges.length === 0) {
                 showMessage('No connectors to format', 'info');
                 return;
@@ -3693,7 +3753,7 @@
                     if (hoveredNodeEl === nodeEl) updateInfoPanelForNode(nodeEl);
                 });
 
-                nodeEl.onclick = (e) => {
+                nodeEl.onclick = async (e) => {
                     // Only trigger click if it wasn't a drag operation
                     if (!dragStarted) {
                         if (editMode) {
@@ -3714,10 +3774,10 @@
                                     };
                                     currentDiagram.edges.push(newEdge);
                                     hasUnsavedChanges = true;
-                                    document.getElementById('saveButton').classList.add('show');
+                                    const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
                                     scheduleAutoSave();
-                                    // Immediate autosave on connector add (click-to-connect)
-                                    saveDiagram(true);
+                                    // Immediate forced autosave on connector add (click-to-connect)
+                                    await saveDiagram(true, true);
                                     updateConnections();
                                     updateDiagramInfoBox();
                                     openEdgeEditor(newEdge.id);
@@ -4946,13 +5006,33 @@
                 if (style.strokeDasharray) line.style.strokeDasharray = String(style.strokeDasharray);
                 // Interactivity
                 line.style.cursor = 'pointer';
+                // Invisible hit area for easier clicking
+                const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                hit.setAttribute('x1', pathPoints[0].x);
+                hit.setAttribute('y1', pathPoints[0].y);
+                hit.setAttribute('x2', pathPoints[1].x);
+                hit.setAttribute('y2', pathPoints[1].y);
+                hit.setAttribute('data-edge-id', edgeId);
+                hit.style.stroke = 'transparent';
+                hit.style.strokeWidth = String(Math.max(10, (style.strokeWidth || 2) + 8));
+                hit.style.pointerEvents = 'stroke';
+                hit.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    const id = hit.getAttribute('data-edge-id');
+                    if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
+                    selectEdge(id);
+                    if (editMode) openEdgeEditor(id);
+                });
                 line.addEventListener('click', (ev) => {
                     ev.stopPropagation();
                     const id = line.getAttribute('data-edge-id');
                     if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
+                    // Single-click selects and opens the edge editor
                     selectEdge(id);
+                    if (editMode) openEdgeEditor(id);
                 });
-                line.addEventListener('dblclick', (ev) => { ev.stopPropagation(); openEdgeEditor(line.getAttribute('data-edge-id')); });
+                // Remove need for double-click to open editor
+                svg.appendChild(hit);
                 svg.appendChild(line);
             } else {
                 // Multi-segment path using polyline or multiple lines
@@ -4970,13 +5050,32 @@
                     if (style.strokeDasharray) line.style.strokeDasharray = String(style.strokeDasharray);
                     // Interactivity - each segment should be clickable
                     line.style.cursor = 'pointer';
+                    // Invisible hit area for easier clicking on each segment
+                    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    hit.setAttribute('x1', pathPoints[i].x);
+                    hit.setAttribute('y1', pathPoints[i].y);
+                    hit.setAttribute('x2', pathPoints[i + 1].x);
+                    hit.setAttribute('y2', pathPoints[i + 1].y);
+                    hit.setAttribute('data-edge-id', edgeId);
+                    hit.style.stroke = 'transparent';
+                    hit.style.strokeWidth = String(Math.max(10, (style.strokeWidth || 2) + 8));
+                    hit.style.pointerEvents = 'stroke';
+                    hit.addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        const id = hit.getAttribute('data-edge-id');
+                        if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
+                        selectEdge(id);
+                        if (editMode) openEdgeEditor(id);
+                    });
                     line.addEventListener('click', (ev) => {
                         ev.stopPropagation();
                         const id = line.getAttribute('data-edge-id');
                         if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
                         selectEdge(id);
+                        if (editMode) openEdgeEditor(id);
                     });
-                    line.addEventListener('dblclick', (ev) => { ev.stopPropagation(); openEdgeEditor(line.getAttribute('data-edge-id')); });
+                    // Remove need for double-click to open editor
+                    svg.appendChild(hit);
                     svg.appendChild(line);
                 }
             }
@@ -5039,8 +5138,9 @@
                 const id = arrowhead.getAttribute('data-edge-id');
                 if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
                 selectEdge(id);
+                if (editMode) openEdgeEditor(id);
             });
-            arrowhead.addEventListener('dblclick', (ev) => { ev.stopPropagation(); openEdgeEditor(arrowhead.getAttribute('data-edge-id')); });
+            // Remove need for double-click to open editor
             svg.appendChild(arrowhead);
 
 
@@ -5254,7 +5354,7 @@
                     if (didDrag) { didDrag = false; return; }
                     if (editMode) { openInlineEdgeLabelEditor(id); } else { selectEdge(id); }
                 });
-                rect.addEventListener('dblclick', (ev) => { ev.stopPropagation(); openEdgeEditor(rect.getAttribute('data-edge-id')); });
+                // Remove need for double-click to open editor on label background
 
                 // Insert rect behind text and position text
                 svg.insertBefore(rect, text);

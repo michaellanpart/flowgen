@@ -7,7 +7,7 @@ nodes:
     type: start
     position:
       x: 100
-      y: 199
+      y: 101
     dimensions:
       width: 82
       height: 82
@@ -18,18 +18,18 @@ nodes:
     type: process
     position:
       x: 489
-      y: 353
+      y: 255
     dimensions:
       width: 105
       height: 60
     style:
-      fill: '#CCCCCC'
+      fill: '#80C0EA'
   - id: process_1758497587395
     name: Passed Validation
     type: process
     position:
       x: 263
-      y: 210
+      y: 112
     dimensions:
       width: 157
       height: 60
@@ -40,7 +40,7 @@ nodes:
     type: process
     position:
       x: 483
-      y: 210
+      y: 112
     dimensions:
       width: 117
       height: 60
@@ -51,7 +51,7 @@ nodes:
     type: decision
     position:
       x: 356
-      y: 347
+      y: 249
     dimensions:
       width: 72
       height: 72
@@ -62,7 +62,7 @@ nodes:
     type: decision
     position:
       x: 254
-      y: 347
+      y: 249
     dimensions:
       width: 72
       height: 72
@@ -72,8 +72,8 @@ nodes:
     name: End
     type: end
     position:
-      x: 219
-      y: 470
+      x: 255
+      y: 376
     dimensions:
       width: 69
       height: 69
@@ -84,29 +84,18 @@ nodes:
     type: end
     position:
       x: 666
-      y: 198
+      y: 100
     dimensions:
       width: 83
       height: 83
     style:
       fill: '#2ECC71'
-  - id: process_1758625514131
-    name: Something Else
-    type: process
-    position:
-      x: 270
-      y: 100
-    dimensions:
-      width: 143
-      height: 60
-    style:
-      fill: '#CCCCCC'
-  - id: process_1758798069385
+  - id: connector_1758492243168_step_1758799873935
     name: New Step
     type: process
     position:
-      x: 680
-      y: 353
+      x: 750
+      y: 318
     dimensions:
       width: 120
       height: 60
@@ -176,15 +165,6 @@ edges:
       stroke: '#a9adb1'
       strokeWidth: 1
       strokeDasharray: 6,2
-  - id: process_1758497587395-process_1758625514131-1758625522259
-    name: ""
-    type: ""
-    from: process_1758497587395
-    to: process_1758625514131
-    style:
-      stroke: '#a9adb1'
-      strokeWidth: 1
-      strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758720555134
     name: ""
     type: ""
@@ -203,11 +183,11 @@ edges:
       stroke: '#a9adb1'
       strokeWidth: 1
       strokeDasharray: 6,2
-  - id: connector_1758492243168-process_1758798069385-1758798078895
+  - id: connector_1758492243168-connector_1758492243168_step_1758799873935-1758799873937
     name: ""
     type: ""
     from: connector_1758492243168
-    to: process_1758798069385
+    to: connector_1758492243168_step_1758799873935
     style:
       stroke: '#34495e'
       strokeWidth: 2
@@ -217,4 +197,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-25T06:03:14.655173-05:00
+updated: 2025-09-25T06:31:34.591463-05:00
