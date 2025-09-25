@@ -41,10 +41,13 @@ body { padding-top: 56px; background: #f3f4f6; font-family: -apple-system, Blink
 .main-tab-content.active { display: block; }
 
 /* Info panel */
-.info-panel { flex: 0 0 auto; width: 360px; border: 1px solid #e5e7eb; border-radius: .75rem; background: #fff; padding: 16px; display: flex; flex-direction: column; min-height: 0; }
+.info-panel { flex: 0 0 auto; width: 360px; border: 1px solid #e5e7eb; border-radius: .75rem; background: #fff; padding: 0; display: flex; flex-direction: column; min-height: 0; }
 .info-panel.collapsed { width: 0; padding: 0; border: 0; overflow: visible; }
 .info-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; position: sticky; top: 0; background: #fff; padding-bottom: 6px; z-index: 1; }
 .info-panel > #infoPanelBody { overflow: auto; min-height: 0; }
+
+/* Make docked editors fill the panel without extra chrome */
+.info-panel #infoPanelBody { padding: 0; }
 .info-title { font-weight: 700; color: #1f2937; font-size: .95rem; margin: 0; }
 .info-subtitle { font-size: .7rem; color: #6b7280; margin-top: 2px; }
 .info-section { margin: 12px 0; font-size: .8rem; color: #374151; }
@@ -187,7 +190,7 @@ rect.connection-label-bg.selected { stroke: #2563eb !important; stroke-width: 1.
 
 /* Editor (modal/docked) */
 .node-editor { display: none; }
-.node-editor:not(.docked) { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1200; width: min(520px, calc(100vw - 32px)); background: #ffffff; border: 1px solid #e5e7eb; border-radius: .75rem; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
+.node-editor:not(.docked) { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1200; width: min(520px, calc(100vw - 32px)); background: #ffffff; }
 .editor-header { background: #3b82f6; color: #fff; padding: 16px 20px; margin: 0; border-top-left-radius: .75rem; border-top-right-radius: .75rem; }
 .editor-content { padding: 20px; max-height: 400px; overflow-y: auto; }
 .editor-group { margin-bottom: 12px; }

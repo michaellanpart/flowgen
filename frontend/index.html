@@ -154,151 +154,120 @@
 
 
 
-        <!-- Node Editor Modal -->
-        <div id="nodeEditor" class="node-editor"
-            style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#fff;">
-            <div class="panel-title" style="font-weight:600;font-size:13px;margin-bottom:8px;color:#374151;">Node
-                Settings</div>
-
-            <div class="accordion" id="nodeEditorAccordion">
-                <!-- Basic (reduced) -->
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingBasic">
-                        <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseBasic" aria-expanded="true" aria-controls="collapseBasic">📝
-                            Basic</button>
-                    </h2>
-                    <div id="collapseBasic" class="accordion-collapse collapse show" aria-labelledby="headingBasic">
-                        <div class="accordion-body">
-                            <div class="editor-group">
-                                <label for="nodeType">Type & Shape:</label>
-                                <select id="nodeType" onchange="updateShapePreview()">
-                                    <option value="process">📦 Process (Rectangle)</option>
-                                    <option value="start">🟢 Start (Circle)</option>
-                                    <option value="end">🔴 End (Circle)</option>
-                                    <option value="decision">💎 Decision (Diamond)</option>
-                                    <option value="data">📊 Data (Hexagon)</option>
-                                    <option value="connector">🔗 Connector (Circle)</option>
-                                </select>
-                            </div>
-                        </div>
+        <!-- Node Editor Modal (Card-based) -->
+        <div id="nodeEditor" class="node-editor card">
+            <div class="card-header">Node Settings</div>
+            <div class="card-body" style="padding:12px;">
+                <!-- Basic -->
+                <div class="editor-section" style="margin-bottom:12px;">
+                    <div class="editor-group">
+                        <label for="nodeType">Type & Shape:</label>
+                        <select id="nodeType" onchange="updateShapePreview()">
+                            <option value="process">📦 Process (Rectangle)</option>
+                            <option value="start">🟢 Start (Circle)</option>
+                            <option value="end">🔴 End (Circle)</option>
+                            <option value="decision">💎 Decision (Diamond)</option>
+                            <option value="data">📊 Data (Hexagon)</option>
+                            <option value="connector">🔗 Connector (Circle)</option>
+                        </select>
                     </div>
                 </div>
 
                 <!-- Style -->
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingStyle">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseStyle" aria-expanded="false" aria-controls="collapseStyle">🎨
-                            Style</button>
-                    </h2>
-                    <div id="collapseStyle" class="accordion-collapse collapse" aria-labelledby="headingStyle">
-                        <div class="accordion-body">
-                            <div class="editor-group">
-                                <label>Fill Color:</label>
-                                <div class="color-grid" id="fillColorGrid">
-                                    <div class="color-option" style="background: #2ecc71" data-color="#2ecc71"></div>
-                                    <div class="color-option" style="background: #3498db" data-color="#3498db"></div>
-                                    <div class="color-option" style="background: #9b59b6" data-color="#9b59b6"></div>
-                                    <div class="color-option" style="background: #f39c12" data-color="#f39c12"></div>
-                                    <div class="color-option" style="background: #e74c3c" data-color="#e74c3c"></div>
-                                    <div class="color-option" style="background: #1abc9c" data-color="#1abc9c"></div>
-                                    <div class="color-option" style="background: #34495e" data-color="#34495e"></div>
-                                    <div class="color-option" style="background: #95a5a6" data-color="#95a5a6"></div>
-                                    <div class="color-option" style="background: #16a085" data-color="#16a085"></div>
-                                    <div class="color-option" style="background: #8e44ad" data-color="#8e44ad"></div>
-                                    <div class="color-option" style="background: #d35400" data-color="#d35400"></div>
-                                    <div class="color-option" style="background: #c0392b" data-color="#c0392b"></div>
-                                    <div class="color-option" style="background: #27ae60" data-color="#27ae60"></div>
-                                    <div class="color-option" style="background: #2980b9" data-color="#2980b9"></div>
-                                    <div class="color-option" style="background: #8e44ad" data-color="#8e44ad"></div>
-                                    <div class="color-option" style="background: #f1c40f" data-color="#f1c40f"></div>
-                                </div>
-                            </div>
-                            <div class="editor-group">
-                                <label>Custom Color:</label>
-                                <div style="display:flex; align-items:center; gap:10px; flex-wrap: wrap;">
-                                    <input type="color" id="customColorInput"
-                                        style="width:40px; height:32px; padding:0; border:none; background:transparent;" />
-                                    <input type="text" id="customHexInput" placeholder="#RRGGBB"
-                                        style="width:110px; padding:6px 8px;" />
-                                    <button class="btn btn-sm btn-outline-secondary" id="addFavoriteColorBtn"
-                                        type="button">⭐ Add to
-                                        Favorites</button>
-                                    <input type="hidden" id="selectedColorValue" />
-                                </div>
-                            </div>
-                            <div class="editor-group">
-                                <label>Favorites:</label>
-                                <div id="favoriteColors" class="color-grid"></div>
-                            </div>
-                            <div class="editor-group">
-                                <label for="nodeBorderColor">Border Color:</label>
-                                <input type="color" id="nodeBorderColor" value="#1f2937" />
-                            </div>
-                            <div class="editor-group">
-                                <label for="nodeBorderWidth">Border Width (px):</label>
-                                <input type="number" id="nodeBorderWidth" min="0" max="10" step="1" value="2" />
-                            </div>
-                            <div class="editor-group">
-                                <label for="nodeRotation">Rotation:</label>
-                                <input type="range" id="nodeRotation" min="0" max="360" step="15" value="0"
-                                    oninput="updateRotationPreview()">
-                                <span id="rotationValue">0°</span>
-                            </div>
+                <div class="editor-section" style="margin-bottom:12px;">
+                    <div class="editor-group">
+                        <label>Fill Color:</label>
+                        <div class="color-grid" id="fillColorGrid">
+                            <div class="color-option" style="background: #2ecc71" data-color="#2ecc71"></div>
+                            <div class="color-option" style="background: #3498db" data-color="#3498db"></div>
+                            <div class="color-option" style="background: #9b59b6" data-color="#9b59b6"></div>
+                            <div class="color-option" style="background: #f39c12" data-color="#f39c12"></div>
+                            <div class="color-option" style="background: #e74c3c" data-color="#e74c3c"></div>
+                            <div class="color-option" style="background: #1abc9c" data-color="#1abc9c"></div>
+                            <div class="color-option" style="background: #34495e" data-color="#34495e"></div>
+                            <div class="color-option" style="background: #95a5a6" data-color="#95a5a6"></div>
+                            <div class="color-option" style="background: #16a085" data-color="#16a085"></div>
+                            <div class="color-option" style="background: #8e44ad" data-color="#8e44ad"></div>
+                            <div class="color-option" style="background: #d35400" data-color="#d35400"></div>
+                            <div class="color-option" style="background: #c0392b" data-color="#c0392b"></div>
+                            <div class="color-option" style="background: #27ae60" data-color="#27ae60"></div>
+                            <div class="color-option" style="background: #2980b9" data-color="#2980b9"></div>
+                            <div class="color-option" style="background: #8e44ad" data-color="#8e44ad"></div>
+                            <div class="color-option" style="background: #f1c40f" data-color="#f1c40f"></div>
                         </div>
+                    </div>
+                    <div class="editor-group">
+                        <label>Custom Color:</label>
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap: wrap;">
+                            <input type="color" id="customColorInput"
+                                style="width:40px; height:32px; padding:0; border:none; background:transparent;" />
+                            <input type="text" id="customHexInput" placeholder="#RRGGBB"
+                                style="width:110px; padding:6px 8px;" />
+                            <button class="btn btn-sm btn-outline-secondary" id="addFavoriteColorBtn" type="button">⭐
+                                Add to Favorites</button>
+                            <input type="hidden" id="selectedColorValue" />
+                        </div>
+                    </div>
+                    <div class="editor-group">
+                        <label>Favorites:</label>
+                        <div id="favoriteColors" class="color-grid"></div>
+                    </div>
+                    <div class="editor-group">
+                        <label for="nodeBorderColor">Border Color:</label>
+                        <input type="color" id="nodeBorderColor" value="#1f2937" />
+                    </div>
+                    <div class="editor-group">
+                        <label for="nodeBorderWidth">Border Width (px):</label>
+                        <input type="number" id="nodeBorderWidth" min="0" max="10" step="1" value="2" />
+                    </div>
+                    <div class="editor-group">
+                        <label for="nodeRotation">Rotation:</label>
+                        <input type="range" id="nodeRotation" min="0" max="360" step="15" value="0"
+                            oninput="updateRotationPreview()">
+                        <span id="rotationValue">0°</span>
                     </div>
                 </div>
 
                 <!-- Text -->
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingText">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseText" aria-expanded="false" aria-controls="collapseText">📍
-                            Text</button>
-                    </h2>
-                    <div id="collapseText" class="accordion-collapse collapse" aria-labelledby="headingText">
-                        <div class="accordion-body">
-                            <div class="editor-group">
-                                <label>Text Position:</label>
-                                <div class="text-position-grid">
-                                    <button type="button" class="text-position-btn" data-h="flex-start"
-                                        data-v="flex-start" title="Top Left">↖️</button>
-                                    <button type="button" class="text-position-btn" data-h="center" data-v="flex-start"
-                                        title="Top Center">⬆️</button>
-                                    <button type="button" class="text-position-btn" data-h="flex-end"
-                                        data-v="flex-start" title="Top Right">↗️</button>
-                                    <button type="button" class="text-position-btn" data-h="flex-start" data-v="center"
-                                        title="Middle Left">⬅️</button>
-                                    <button type="button" class="text-position-btn" data-h="center" data-v="center"
-                                        title="Middle Center" data-default="true">🎯</button>
-                                    <button type="button" class="text-position-btn" data-h="flex-end" data-v="center"
-                                        title="Middle Right">➡️</button>
-                                    <button type="button" class="text-position-btn" data-h="flex-start"
-                                        data-v="flex-end" title="Bottom Left">↙️</button>
-                                    <button type="button" class="text-position-btn" data-h="center" data-v="flex-end"
-                                        title="Bottom Center">⬇️</button>
-                                    <button type="button" class="text-position-btn" data-h="flex-end" data-v="flex-end"
-                                        title="Bottom Right">↘️</button>
-                                </div>
-                            </div>
-                            <div class="editor-group">
-                                <label for="textAlign">Text Alignment:</label>
-                                <select id="textAlign">
-                                    <option value="left">← Left</option>
-                                    <option value="center" selected>⬌ Center</option>
-                                    <option value="right">→ Right</option>
-                                    <option value="justify">▢ Justify</option>
-                                </select>
-                            </div>
+                <div class="editor-section">
+                    <div class="section-title" style="font-weight:600;color:#374151;margin-bottom:8px;">📍 Text</div>
+                    <div class="editor-group">
+                        <label>Text Position:</label>
+                        <div class="text-position-grid">
+                            <button type="button" class="text-position-btn" data-h="flex-start" data-v="flex-start"
+                                title="Top Left">↖️</button>
+                            <button type="button" class="text-position-btn" data-h="center" data-v="flex-start"
+                                title="Top Center">⬆️</button>
+                            <button type="button" class="text-position-btn" data-h="flex-end" data-v="flex-start"
+                                title="Top Right">↗️</button>
+                            <button type="button" class="text-position-btn" data-h="flex-start" data-v="center"
+                                title="Middle Left">⬅️</button>
+                            <button type="button" class="text-position-btn" data-h="center" data-v="center"
+                                title="Middle Center" data-default="true">🎯</button>
+                            <button type="button" class="text-position-btn" data-h="flex-end" data-v="center"
+                                title="Middle Right">➡️</button>
+                            <button type="button" class="text-position-btn" data-h="flex-start" data-v="flex-end"
+                                title="Bottom Left">↙️</button>
+                            <button type="button" class="text-position-btn" data-h="center" data-v="flex-end"
+                                title="Bottom Center">⬇️</button>
+                            <button type="button" class="text-position-btn" data-h="flex-end" data-v="flex-end"
+                                title="Bottom Right">↘️</button>
                         </div>
+                    </div>
+                    <div class="editor-group">
+                        <label for="textAlign">Text Alignment:</label>
+                        <select id="textAlign">
+                            <option value="left">← Left</option>
+                            <option value="center" selected>⬌ Center</option>
+                            <option value="right">→ Right</option>
+                            <option value="justify">▢ Justify</option>
+                        </select>
                     </div>
                 </div>
 
                 <!-- Size removed: handled inline via resize handles; Name edited inline on the shape -->
             </div>
-
-            <div class="editor-buttons">
+            <div class="card-footer" style="display:flex; justify-content:flex-end; gap:8px;">
                 <button class="btn btn-danger" onclick="confirmDeleteCurrentNode()">Delete</button>
             </div>
         </div>
@@ -1668,8 +1637,7 @@
                     titleEl.appendChild(badge);
                 }
             } catch (_) { }
-            // Initialize Bootstrap Accordion persistence when docked
-            initBootstrapAccordionPersistence();
+            // Accordion removed; no persistence needed
         }
         function undockNodeEditor() {
             const editor = document.getElementById('nodeEditor');
@@ -1719,56 +1687,7 @@
             appRoot.appendChild(editor);
         }
 
-        // Persist accordion state across sessions
-        const EDITOR_ACCORDION_KEY = 'flowgen.editorAccordion';
-        function loadAccordionState() {
-            try {
-                const raw = localStorage.getItem(EDITOR_ACCORDION_KEY);
-                if (!raw) return {};
-                return JSON.parse(raw) || {};
-            } catch (_) { return {}; }
-        }
-        function saveAccordionState(state) {
-            try { localStorage.setItem(EDITOR_ACCORDION_KEY, JSON.stringify(state || {})); } catch (_) { }
-        }
-
-        // Bootstrap Accordion: persist open/closed sections for the Node Editor when docked
-        function initBootstrapAccordionPersistence() {
-            const acc = document.getElementById('nodeEditorAccordion');
-            if (!acc) return;
-            const KEY = 'flowgen.nodeEditorAccordionState.v1';
-
-            function loadState() {
-                try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (_) { return {}; }
-            }
-            function saveState(s) {
-                try { localStorage.setItem(KEY, JSON.stringify(s || {})); } catch (_) { }
-            }
-
-            // Apply saved state (default: Basic open, others closed)
-            const saved = loadState();
-            acc.querySelectorAll('.accordion-collapse[id]').forEach((panel) => {
-                const id = panel.id;
-                const shouldOpen = (saved[id] != null) ? !!saved[id] : (id === 'collapseBasic');
-                panel.classList.toggle('show', shouldOpen);
-                const btn = acc.querySelector(`button[data-bs-target="#${id}"]`);
-                if (btn) btn.setAttribute('aria-expanded', String(shouldOpen));
-            });
-
-            // Listen to Bootstrap collapse events to persist changes
-            acc.querySelectorAll('.accordion-collapse[id]').forEach((panel) => {
-                panel.addEventListener('shown.bs.collapse', () => {
-                    const s = loadState();
-                    s[panel.id] = true;
-                    saveState(s);
-                });
-                panel.addEventListener('hidden.bs.collapse', () => {
-                    const s = loadState();
-                    s[panel.id] = false;
-                    saveState(s);
-                });
-            });
-        }
+        // Accordion removed; no persistence or related helpers required.
 
         // Legacy manual docked headings removed; Bootstrap Accordion is used directly.
         function computeConnectionPointCenter(cpEl) {
@@ -3042,9 +2961,129 @@
             node.dimensions.height = height;
         }
 
+        // Rebuild a node's connection points UI based on its current type
+        function rebuildNodeConnectionPoints(node, nodeElement) {
+            if (!node || !nodeElement) return;
+            // Remove existing connection points
+            try { nodeElement.querySelectorAll('.connection-point').forEach(el => el.remove()); } catch (_) { }
+
+            // Add connection points on each side (different positioning for different shapes)
+            const styleForCP = node.style || {};
+            const bwForCP = Object.prototype.hasOwnProperty.call(styleForCP, 'strokeWidth')
+                ? Math.max(0, Number(styleForCP.strokeWidth) || 0)
+                : 2;
+            const bump = Math.max(2, Math.round(bwForCP / 2) + 2);
+
+            let connectionPoints;
+            if (node.type === 'decision') {
+                connectionPoints = [
+                    { side: 'top', x: '0%', y: '0%', transform: 'translate(-50%, -50%)' },
+                    { side: 'right', x: '100%', y: '0%', transform: 'translate(-50%, -50%)' },
+                    { side: 'bottom', x: '100%', y: '100%', transform: 'translate(-50%, -50%)' },
+                    { side: 'left', x: '0%', y: '100%', transform: 'translate(-50%, -50%)' }
+                ];
+            } else if (node.type === 'start' || node.type === 'end') {
+                connectionPoints = [
+                    { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                    { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                    { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                    { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                ];
+            } else if (node.type === 'data') {
+                connectionPoints = [
+                    { side: 'top', x: '50%', y: '6%', transform: 'translate(-50%, -50%)' },
+                    { side: 'right', x: '94%', y: '50%', transform: 'translate(-50%, -50%)' },
+                    { side: 'bottom', x: '50%', y: '94%', transform: 'translate(-50%, -50%)' },
+                    { side: 'left', x: '6%', y: '50%', transform: 'translate(-50%, -50%)' }
+                ];
+            } else {
+                connectionPoints = [
+                    { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                    { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                    { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                    { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                ];
+            }
+
+            connectionPoints.forEach(point => {
+                const connectionPoint = document.createElement('div');
+                connectionPoint.className = 'connection-point';
+                connectionPoint.dataset.side = point.side;
+                connectionPoint.dataset.nodeId = node.id;
+                connectionPoint.style.position = 'absolute';
+                connectionPoint.style.left = point.x;
+                connectionPoint.style.top = point.y;
+                connectionPoint.style.transform = point.transform;
+                connectionPoint.style.width = '12px';
+                connectionPoint.style.height = '12px';
+                connectionPoint.style.backgroundColor = 'rgba(52, 152, 219, 0.6)';
+                connectionPoint.style.border = '1px solid rgba(255, 255, 255, 0.7)';
+                connectionPoint.style.borderRadius = '50%';
+                connectionPoint.style.zIndex = '15';
+                connectionPoint.style.cursor = 'crosshair';
+                connectionPoint.style.transition = 'opacity 0.2s, transform 0.2s';
+
+                // Hover effects
+                connectionPoint.addEventListener('mouseenter', () => {
+                    connectionPoint.style.transform = point.transform + ' scale(1.12)';
+                    connectionPoint.style.boxShadow = '0 0 0 2px rgba(255,255,255,0.9), 0 2px 8px rgba(0,0,0,0.2)';
+                    connectionPoint.style.backgroundColor = 'rgba(41, 128, 185, 0.95)';
+                    connectionPoint.style.borderColor = 'rgba(255,255,255,1)';
+                });
+                connectionPoint.addEventListener('mouseleave', () => {
+                    connectionPoint.style.transform = point.transform + ' scale(1)';
+                    connectionPoint.style.boxShadow = '';
+                    connectionPoint.style.backgroundColor = 'rgba(52, 152, 219, 0.6)';
+                    connectionPoint.style.borderColor = 'rgba(255, 255, 255, 0.7)';
+                });
+
+                // Begin connection on mousedown/touch
+                connectionPoint.addEventListener('mousedown', (evt) => {
+                    if (!editMode) return;
+                    evt.preventDefault(); evt.stopPropagation();
+                    startEdgeCreation(connectionPoint, evt.clientX, evt.clientY);
+                });
+                connectionPoint.addEventListener('touchstart', (evt) => {
+                    if (!editMode) return;
+                    const t = evt.touches[0];
+                    evt.preventDefault(); evt.stopPropagation();
+                    startEdgeCreation(connectionPoint, t.clientX, t.clientY);
+                }, { passive: false });
+
+                // Double-click to auto-add a connected step on this side
+                connectionPoint.addEventListener('dblclick', (evt) => {
+                    if (!editMode) return;
+                    evt.preventDefault(); evt.stopPropagation();
+                    const srcId = nodeElement.dataset.nodeId;
+                    addStepFromNode(srcId, point.side);
+                });
+
+                nodeElement.appendChild(connectionPoint);
+            });
+        }
+
         function updateShapePreview() {
-            // Could add visual preview of shape here
-            const nodeType = document.getElementById('nodeType').value;
+            // Apply live shape change to the currently edited node
+            const typeSel = document.getElementById('nodeType');
+            if (!typeSel || !editingNode || !editingNodeElement) return;
+            const newType = typeSel.value || 'process';
+            if (editingNode.type === newType) return;
+
+            // Update model
+            editingNode.type = newType;
+            // Clear manual sizing so auto-resize can adapt the new shape
+            editingNode.manualSize = false;
+            try { autoResizeNode(editingNode, null); } catch (_) { }
+            try { updateNodeVisual(editingNode, editingNodeElement); } catch (_) { }
+            try { addResizeHandles(editingNodeElement, editingNode); } catch (_) { }
+            try { rebuildNodeConnectionPoints(editingNode, editingNodeElement); } catch (_) { }
+            try { updateConnections(); } catch (_) { }
+
+            // Mark dirty and autosave silently
+            hasUnsavedChanges = true;
+            const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
+            scheduleAutoSave();
+            saveDiagram(true);
         }
 
         function updateRotationPreview() {
@@ -3520,6 +3559,8 @@
                             updateNodeVisual(node, nodeEl);
                             // Rebuild resize handles to reflect new shape and avoid overlap
                             addResizeHandles(nodeEl, node);
+                            // Rebuild connection points for the new shape
+                            rebuildNodeConnectionPoints(node, nodeEl);
                             updateConnections();
                             togglePopover(false);
                             hasUnsavedChanges = true;
@@ -3541,6 +3582,13 @@
                 // In-canvas delete button removed; deletion is handled in Node Editor
 
                 // Add connection points on each side (different positioning for different shapes)
+                // Offset outward from thick borders so points don't hide inside the border
+                const styleForCP = node.style || {};
+                const bwForCP = Object.prototype.hasOwnProperty.call(styleForCP, 'strokeWidth')
+                    ? Math.max(0, Number(styleForCP.strokeWidth) || 0)
+                    : 2;
+                const bump = Math.max(2, Math.round(bwForCP / 2) + 2); // outward offset in px
+
                 let connectionPoints;
                 if (node.type === 'decision') {
                     // Diamond is a square rotated 45°. Place connectors at the unrotated square's corners
@@ -3559,10 +3607,10 @@
                 } else if (node.type === 'start' || node.type === 'end') {
                     // Circular shapes - connection points at the actual edge of the circle
                     connectionPoints = [
-                        { side: 'top', x: '50%', y: '0%', transform: 'translate(-50%, -50%)' },
-                        { side: 'right', x: '100%', y: '50%', transform: 'translate(-50%, -50%)' },
-                        { side: 'bottom', x: '50%', y: '100%', transform: 'translate(-50%, -50%)' },
-                        { side: 'left', x: '0%', y: '50%', transform: 'translate(-50%, -50%)' }
+                        { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                        { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                        { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                        { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
                     ];
                 } else if (node.type === 'data') {
                     // Hexagon shapes - inset points slightly to avoid clip-path cutting them off
@@ -3575,10 +3623,10 @@
                 } else {
                     // Rectangular shapes - connection points at middle of each side
                     connectionPoints = [
-                        { side: 'top', x: '50%', y: '0%', transform: 'translate(-50%, -50%)' },
-                        { side: 'right', x: '100%', y: '50%', transform: 'translate(-50%, -50%)' },
-                        { side: 'bottom', x: '50%', y: '100%', transform: 'translate(-50%, -50%)' },
-                        { side: 'left', x: '0%', y: '50%', transform: 'translate(-50%, -50%)' }
+                        { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                        { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                        { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                        { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
                     ];
                 }
 
