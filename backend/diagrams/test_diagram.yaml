@@ -7,20 +7,20 @@ nodes:
     type: start
     position:
       x: 100
-      y: 222
+      y: 199
     dimensions:
-      width: 77
-      height: 77
+      width: 82
+      height: 82
     style:
       fill: '#CCCCCC'
   - id: connector_1758492243168
     name: New Step
     type: process
     position:
-      x: 508
-      y: 360
+      x: 489
+      y: 353
     dimensions:
-      width: 100
+      width: 105
       height: 60
     style:
       fill: '#CCCCCC'
@@ -28,8 +28,8 @@ nodes:
     name: Passed Validation
     type: process
     position:
-      x: 200
-      y: 230
+      x: 263
+      y: 210
     dimensions:
       width: 157
       height: 60
@@ -39,8 +39,8 @@ nodes:
     name: New Step 3
     type: process
     position:
-      x: 500
-      y: 230
+      x: 483
+      y: 210
     dimensions:
       width: 117
       height: 60
@@ -50,8 +50,8 @@ nodes:
     name: "Yes"
     type: decision
     position:
-      x: 382
-      y: 354
+      x: 356
+      y: 347
     dimensions:
       width: 72
       height: 72
@@ -61,19 +61,19 @@ nodes:
     name: "No"
     type: decision
     position:
-      x: 243
-      y: 355
+      x: 254
+      y: 347
     dimensions:
-      width: 70
-      height: 70
+      width: 72
+      height: 72
     style:
       fill: '#E74C3C'
   - id: process_1758497587395_step_1758503351699_step_1758503470042
     name: End
     type: end
     position:
-      x: 244
-      y: 486
+      x: 219
+      y: 470
     dimensions:
       width: 69
       height: 69
@@ -83,8 +83,8 @@ nodes:
     name: Finish
     type: end
     position:
-      x: 657
-      y: 219
+      x: 666
+      y: 198
     dimensions:
       width: 83
       height: 83
@@ -94,24 +94,24 @@ nodes:
     name: Something Else
     type: process
     position:
-      x: 207
+      x: 270
       y: 100
     dimensions:
       width: 143
       height: 60
     style:
       fill: '#CCCCCC'
-  - id: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758720829216
+  - id: process_1758798069385
     name: New Step
     type: process
     position:
-      x: 786
-      y: 230
+      x: 680
+      y: 353
     dimensions:
-      width: 105
+      width: 120
       height: 60
     style:
-      fill: '#CCCCCC'
+      fill: '#3498db'
 edges:
   - id: connector_1758492243168-connector_1758492243168_step_1758498517717-1758498517718
     name: ""
@@ -119,77 +119,95 @@ edges:
     from: connector_1758492243168
     to: connector_1758492243168_step_1758498517717
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
   - id: process_1758491813602-process_1758497587395-1758501011747
     name: ""
     type: ""
     from: process_1758491813602
     to: process_1758497587395
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
   - id: process_1758497587395-process_1758497587395_step_1758503316733-1758503316734
     name: ""
     type: ""
     from: process_1758497587395
     to: process_1758497587395_step_1758503316733
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
   - id: process_1758497587395-process_1758497587395_step_1758503351699-1758503351699
     name: ""
     type: ""
     from: process_1758497587395
     to: process_1758497587395_step_1758503351699
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
   - id: process_1758497587395_step_1758503351699-process_1758497587395_step_1758503351699_step_1758503470042-1758503470043
     name: ""
     type: ""
     from: process_1758497587395_step_1758503351699
     to: process_1758497587395_step_1758503351699_step_1758503470042
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
   - id: process_1758497587395_step_1758503316733-connector_1758492243168-1758503545304
     name: ""
     type: ""
     from: process_1758497587395_step_1758503316733
     to: connector_1758492243168
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758503642984
     name: ""
     type: ""
     from: connector_1758492243168_step_1758498517717
     to: connector_1758492243168_step_1758498517717_step_1758503642983
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
   - id: process_1758497587395-process_1758625514131-1758625522259
     name: ""
     type: ""
     from: process_1758497587395
     to: process_1758625514131
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758720555134
     name: ""
     type: ""
     from: connector_1758492243168_step_1758498517717
     to: connector_1758492243168_step_1758498517717_step_1758503642983
     style:
-      stroke: '#34495e'
-      strokeWidth: 2
-  - id: connector_1758492243168_step_1758498517717_step_1758503642983-connector_1758492243168_step_1758498517717_step_1758503642983_step_1758720829216-1758720829216
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
+  - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758772843863
     name: ""
     type: ""
-    from: connector_1758492243168_step_1758498517717_step_1758503642983
-    to: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758720829216
+    from: connector_1758492243168_step_1758498517717
+    to: connector_1758492243168_step_1758498517717_step_1758503642983
+    style:
+      stroke: '#a9adb1'
+      strokeWidth: 1
+      strokeDasharray: 6,2
+  - id: connector_1758492243168-process_1758798069385-1758798078895
+    name: ""
+    type: ""
+    from: connector_1758492243168
+    to: process_1758798069385
     style:
       stroke: '#34495e'
       strokeWidth: 2
@@ -199,4 +217,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-24T20:18:35.381638-05:00
+updated: 2025-09-25T06:03:14.655173-05:00
