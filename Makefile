@@ -106,3 +106,12 @@ run: backend-run ## Run backend (serves frontend static files)
 clean: ## Remove build artifacts
 	@echo "[clean] removing artifacts..."
 	@rm -rf $(BACKEND_BIN) frontend/dist frontend/build
+
+# -----------------------------
+# Git helpers
+# -----------------------------
+.PHONY: push
+push: ## Add all, commit 'itterate', and push
+	@git add .
+	@git commit -m "itterate" || echo "[git] nothing to commit"
+	@git push

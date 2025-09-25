@@ -95,13 +95,13 @@ nodes:
       fill: '#2ECC71'
   - id: connector_1758492243168_step_1758807023731
     name: New Step
-    type: process
+    type: data
     position:
       x: 488
       y: 355
     dimensions:
-      width: 120
-      height: 60
+      width: 117
+      height: 72
     style:
       fill: '#d5d6d7'
       stroke: '#515152'
@@ -203,4 +203,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-25T08:30:23.75051-05:00
+updated: 2025-09-25T11:56:15.072347-05:00

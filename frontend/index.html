@@ -129,9 +129,9 @@
                         </div>
                     </div>
                 </div>
-                <aside class="info-panel" id="infoPanel" aria-live="polite">
-                    <!-- Flat card-style body; header removed per design -->
-                    <div id="infoPanelBody" class="info-section"></div>
+                <aside id="infoPanel" class="card flex-shrink-0" aria-live="polite" style="width:360px;">
+                    <div id="infoPanelBody" class="card-body"></div>
+                    <div id="infoPanelFooter" class="card-footer d-none"></div>
                 </aside>
             </div>
         </div>
@@ -154,11 +154,9 @@
 
 
 
-        <!-- Node Editor Modal (Card-based) -->
-        <div id="nodeEditor" class="node-editor card">
-            <div class="card-header">Node Settings</div>
-            <div class="card-body" style="padding:12px;">
-                <!-- Basic -->
+        <!-- Node Editor (docked content only; no grouping titles) -->
+        <div id="nodeEditor" class="node-editor">
+            <div class="editor-content">
                 <div class="editor-section" style="margin-bottom:12px;">
                     <div class="editor-group">
                         <label for="nodeType">Type & Shape:</label>
@@ -173,7 +171,6 @@
                     </div>
                 </div>
 
-                <!-- Style -->
                 <div class="editor-section" style="margin-bottom:12px;">
                     <div class="editor-group">
                         <label>Fill Color:</label>
@@ -228,9 +225,7 @@
                     </div>
                 </div>
 
-                <!-- Text -->
                 <div class="editor-section">
-                    <div class="section-title" style="font-weight:600;color:#374151;margin-bottom:8px;">📍 Text</div>
                     <div class="editor-group">
                         <label>Text Position:</label>
                         <div class="text-position-grid">
@@ -254,29 +249,16 @@
                                 title="Bottom Right">↘️</button>
                         </div>
                     </div>
-                    <div class="editor-group">
-                        <label for="textAlign">Text Alignment:</label>
-                        <select id="textAlign">
-                            <option value="left">← Left</option>
-                            <option value="center" selected>⬌ Center</option>
-                            <option value="right">→ Right</option>
-                            <option value="justify">▢ Justify</option>
-                        </select>
-                    </div>
-                </div>
 
-                <!-- Size removed: handled inline via resize handles; Name edited inline on the shape -->
+                </div>
             </div>
-            <div class="card-footer" style="display:flex; justify-content:flex-end; gap:8px;">
+            <div class="editor-buttons">
                 <button class="btn btn-danger" onclick="confirmDeleteCurrentNode()">Delete</button>
             </div>
         </div>
 
-        <!-- Edge Editor Modal -->
-        <div id="edgeEditor" class="node-editor"
-            style="display:none;border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#fff;">
-            <div class="panel-title" style="font-weight:600;font-size:13px;margin-bottom:8px;color:#374151;">Connector
-                Settings</div>
+        <!-- Edge Editor (docked content only; no grouping title) -->
+        <div id="edgeEditor" class="node-editor" style="display:none;">
             <div class="editor-content">
                 <div class="editor-group">
                     <label for="edgeName">Label:</label>
@@ -312,8 +294,6 @@
                         </select>
                     </div>
                 </div>
-                <div style="font-size: 11px; color:#7f8c8d;">Tip: Double-click a connector to open this editor. Click a
-                    connector then press Delete to remove.</div>
             </div>
             <div class="editor-buttons">
                 <button class="btn btn-danger" onclick="deleteEdgeFromEditor()">Delete</button>
@@ -699,10 +679,16 @@
             const panel = document.getElementById('infoPanel');
             const layout = document.querySelector('.diagram-layout');
             if (!panel) return;
-            const isOpen = !!editorDocked;
-            panel.classList.toggle('collapsed', !isOpen);
+            const body = document.getElementById('infoPanelBody');
+            const footer = document.getElementById('infoPanelFooter');
+            const hasBody = !!(body && body.childElementCount > 0);
+            const hasFooter = !!(footer && footer.childElementCount > 0);
+            const isOpen = !!editorDocked && (hasBody || hasFooter);
+            // Show panel only when content exists
+            panel.style.display = isOpen ? '' : 'none';
             panel.setAttribute('aria-hidden', String(!isOpen));
-            if (layout) layout.classList.toggle('no-info-gap', !isOpen);
+            // Always keep a consistent gap between columns
+            if (layout) layout.classList.remove('no-info-gap');
         }
         function openInfoPanelTemp() { /* disabled hover-open */ }
         function maybeCloseInfoPanelTemp() { /* disabled hover-close */ }
@@ -1305,7 +1291,7 @@
             } finally {
                 // Release the update lock even if something throws
                 isUpdatingConnections = false;
-                if (hoveredNodeEl) updateInfoPanelForNode(hoveredNodeEl);
+                // hover info disabled
             }
         }
 
@@ -1622,6 +1608,13 @@
             panelBody.innerHTML = '';
             panelBody.appendChild(editor);
             editor.classList.add('docked');
+            // Move editor buttons to panel footer for proper card layout
+            const footerHost = document.getElementById('infoPanelFooter');
+            const btns = editor.querySelector('.editor-buttons');
+            if (footerHost && btns) {
+                footerHost.replaceChildren(btns);
+                footerHost.classList.remove('d-none');
+            }
             editorDocked = true;
             // Editing: keep header concise and do not show long name/id in subtitle
             setInfoPanelHeader('', '');
@@ -1649,6 +1642,12 @@
             // Move the editor back to the root (right before closing body) to keep DOM tidy
             const appRoot = document.querySelector('#infoPanel')?.parentElement || document.body;
             appRoot.appendChild(editor);
+            // Clear panel footer content and hide it
+            const footerHost = document.getElementById('infoPanelFooter');
+            if (footerHost) {
+                footerHost.replaceChildren();
+                footerHost.classList.add('d-none');
+            }
         }
 
         // Edge editor docking into Info Panel
@@ -1661,6 +1660,13 @@
             panelBody.innerHTML = '';
             panelBody.appendChild(editor);
             editor.classList.add('docked');
+            // Move editor buttons to panel footer for proper card layout
+            const footerHost = document.getElementById('infoPanelFooter');
+            const btns = editor.querySelector('.editor-buttons');
+            if (footerHost && btns) {
+                footerHost.replaceChildren(btns);
+                footerHost.classList.remove('d-none');
+            }
             editorDocked = true;
             // Header: concise during editing; no long connector summary
             setInfoPanelHeader('Info', '');
@@ -1685,6 +1691,12 @@
             applyInfoPanelState();
             const appRoot = document.querySelector('#infoPanel')?.parentElement || document.body;
             appRoot.appendChild(editor);
+            // Clear panel footer content and hide it
+            const footerHost = document.getElementById('infoPanelFooter');
+            if (footerHost) {
+                footerHost.replaceChildren();
+                footerHost.classList.add('d-none');
+            }
         }
 
         // Accordion removed; no persistence or related helpers required.
@@ -1701,114 +1713,8 @@
             return { x: Math.round(cx), y: Math.round(cy) };
         }
         function updateInfoPanelForNode(nodeEl) {
-            // When the editor is docked, do not overwrite the panel with hover info
-            if (editorDocked) return;
-            if (!nodeEl) { clearInfoPanelBody(); return; }
-            const nodeId = nodeEl.dataset.nodeId || '';
-            const node = (window.currentDiagram?.nodes || []).find(n => (n.id || '') === nodeId);
-            const name = node?.name || nodeId || 'Node';
-            const type = node?.type || 'process';
-            const left = parseInt(nodeEl.style.left) || 0;
-            const top = parseInt(nodeEl.style.top) || 0;
-            const width = nodeEl.offsetWidth;
-            const height = nodeEl.offsetHeight;
-            const cps = Array.from(nodeEl.querySelectorAll('.connection-point'));
-            const items = cps.map(cp => {
-                const side = cp.dataset.side || '';
-                const pt = computeConnectionPointCenter(cp);
-                return `<li><code>${side}</code> → (<code>${pt.x}</code>, <code>${pt.y}</code>)</li>`;
-            }).join('');
-            // Gather additional properties
-            const position = node?.position ? { x: node.position.x, y: node.position.y } : { x: left + 50, y: top + 50 };
-            const dimensions = node?.dimensions ? { w: node.dimensions.width, h: node.dimensions.height } : { w: width, h: height };
-            const rotation = node?.rotation ?? 0;
-            const textAlign = node?.textAlign || 'center';
-            const textPos = node?.textPosition || { horizontal: 'center', vertical: 'center' };
-            const manualSize = !!node?.manualSize;
-            const style = node?.style || {};
-            const fill = style.fill || '';
-            const stroke = style.stroke || '';
-            const strokeWidth = style.strokeWidth ?? 2;
-            const strokeDash = style.strokeDasharray || '';
-            const integrations = node?.integrations || {};
-            const jira = integrations.jira ? `${integrations.jira.projectKey}-${integrations.jira.issueKey}` : '';
-            const drillDown = node?.drillDown || '';
-            const metadata = node?.metadata || {};
-
-            // Build categorized connectors (edges) for this node
-            const allEdges = Array.isArray(window.currentDiagram?.edges) ? window.currentDiagram.edges : [];
-            const incoming = allEdges.filter(e => (e.to || '') === nodeId);
-            const outgoing = allEdges.filter(e => (e.from || '') === nodeId);
-            const nodesArr = Array.isArray(window.currentDiagram?.nodes) ? window.currentDiagram.nodes : [];
-            const byId = (id) => nodesArr.find(n => (n.id || '') === id);
-            const fmt = (v) => (v == null || v === '') ? '—' : String(v);
-            const outgoingList = outgoing.map(e => {
-                const to = byId(e.to);
-                const toName = to?.name || e.to || '';
-                const label = (e.name && e.name.trim()) ? ` · Label: <code>${e.name}</code>` : '';
-                const tech = (e.metadata && e.metadata.technology) ? ` · Tech: <code>${fmt(e.metadata.technology)}</code>` : '';
-                return `<li>to <code>${toName}</code> (<code>${e.to}</code>)${label}${tech}</li>`;
-            }).join('') || '<li>None</li>';
-            const incomingList = incoming.map(e => {
-                const from = byId(e.from);
-                const fromName = from?.name || e.from || '';
-                const label = (e.name && e.name.trim()) ? ` · Label: <code>${e.name}</code>` : '';
-                const tech = (e.metadata && e.metadata.technology) ? ` · Tech: <code>${fmt(e.metadata.technology)}</code>` : '';
-                return `<li>from <code>${fromName}</code> (<code>${e.from}</code>)${label}${tech}</li>`;
-            }).join('') || '<li>None</li>';
-
-            const html = `
-                <div class="info-section">Type: <code>${type}</code></div>
-                <div class="info-section">
-                    <div><strong>Text</strong></div>
-                    <ul class="info-list">
-                        <li>Displayed: <code>${name}</code></li>
-                    </ul>
-                </div>
-                <div class="info-section">
-                    <div><strong>Layout</strong></div>
-                    <ul class="info-list">
-                        <li>Canvas Pos: (<code>${left}</code>, <code>${top}</code>) · Size: <code>${width}×${height}</code></li>
-                        <li>Diagram Pos: (<code>${position.x}</code>, <code>${position.y}</code>) · Dimensions: <code>${dimensions.w}×${dimensions.h}</code></li>
-                        <li>Rotation: <code>${rotation}°</code> · Manual Size: <code>${manualSize}</code></li>
-                    </ul>
-                </div>
-                <div class="info-section">
-                    <div><strong>Text Layout</strong></div>
-                    <ul class="info-list">
-                        <li>Align: <code>${textAlign}</code></li>
-                        <li>Position: h=<code>${textPos.horizontal}</code>, v=<code>${textPos.vertical}</code></li>
-                    </ul>
-                </div>
-                <div class="info-section">
-                    <div><strong>Style</strong></div>
-                    <ul class="info-list">
-                        <li>Fill: <code>${fill || '—'}</code></li>
-                        <li>Stroke: <code>${stroke || '—'}</code> · Width: <code>${strokeWidth}</code> · Dash: <code>${strokeDash || '—'}</code></li>
-                    </ul>
-                </div>
-                <div class="info-section">
-                    <div><strong>Integrations</strong></div>
-                    <ul class="info-list">
-                        <li>Jira: <code>${jira || '—'}</code></li>
-                        <li>Drill-down: <code>${drillDown || '—'}</code></li>
-                    </ul>
-                </div>
-                <div class="info-section">
-                    <div><strong>Connectors</strong></div>
-                    <div style="color:#6b7280; font-size:12px; margin:2px 0 6px;">Associated edges grouped by direction</div>
-                    <div style="font-weight:600; margin-bottom:4px;">Outgoing (${outgoing.length})</div>
-                    <ul class="info-list">${outgoingList}</ul>
-                    <div style="font-weight:600; margin:8px 0 4px;">Incoming (${incoming.length})</div>
-                    <ul class="info-list">${incomingList}</ul>
-                </div>
-                <div class="info-section">
-                    <div><strong>Ports (canvas)</strong></div>
-                    <ul class="info-list">${items || '<li>None</li>'}</ul>
-                </div>
-            `;
-            setInfoPanelHeader('', '');
-            setInfoPanelBody(html);
+            // Hover-driven info panel is disabled; no-op to prevent hover content
+            return;
         }
 
         // ============ GRID AND LAYOUT FUNCTIONS ============
@@ -2513,7 +2419,7 @@
             document.getElementById('nodeType').value = node.type || 'process';
             document.getElementById('nodeRotation').value = node.rotation || 0;
             document.getElementById('rotationValue').textContent = (node.rotation || 0) + '°';
-            document.getElementById('textAlign').value = node.textAlign || 'center';
+            // text alignment control removed
             // Populate border controls
             const bcEl = document.getElementById('nodeBorderColor');
             const bwEl = document.getElementById('nodeBorderWidth');
@@ -2658,7 +2564,7 @@
                 const size = Math.max(newWidth || 0, newHeight || 0);
                 newWidth = size; newHeight = size;
             }
-            const newTextAlign = document.getElementById('textAlign').value;
+            // text alignment control removed
             // Determine selected color preference
             const selectedValueEl = document.getElementById('selectedColorValue');
             const sv = selectedValueEl ? (selectedValueEl.value || '') : '';
@@ -2684,7 +2590,7 @@
             editingNode.type = newType;
             editingNode.rotation = newRotation;
             editingNode.textPosition = textPosition;
-            editingNode.textAlign = newTextAlign;
+            // preserve existing alignment; editing via panel removed
             editingNode.dimensions = editingNode.dimensions || {};
 
             // Determine if user changed dimensions in this edit
@@ -3111,7 +3017,6 @@
                     clickConnectState = { sourceNodeId: src.dataset.nodeId };
                     showMessage('Click a target node to connect', 'info');
                     hoveredNodeEl = src;
-                    updateInfoPanelForNode(src);
                 } else {
                     showMessage('Select a source node first, then press C', 'info');
                 }
@@ -3770,8 +3675,7 @@
                     mouseDownTime = Date.now();
                     dragStarted = false;
                     if (editMode) setSelectedNode(nodeEl);
-                    hoveredNodeEl = nodeEl; // track for info updates during drag
-                    updateInfoPanelForNode(nodeEl);
+                    hoveredNodeEl = nodeEl; // track selection only
                     // Alt/Option + drag from node body starts a connector from the nearest side
                     if (editMode && e.altKey && !e.target.closest('.connection-point')) {
                         e.preventDefault();
@@ -3800,7 +3704,7 @@
                         dragStarted = true;
                     }
                     // live update while hovering
-                    if (hoveredNodeEl === nodeEl) updateInfoPanelForNode(nodeEl);
+                    // hover info disabled
                 });
 
                 nodeEl.onclick = async (e) => {
@@ -3922,7 +3826,7 @@
             // Apply current zoom to the stage and update the info box
             applyZoom();
             updateDiagramInfoBox();
-            if (hoveredNodeEl) updateInfoPanelForNode(hoveredNodeEl);
+            // hover info disabled
         }
 
         function applyZoom() {
@@ -3941,7 +3845,7 @@
             // Note: updateConnections() safely clears the edges layer before drawing
             updateConnections();
             // Update info panel positions if hovering
-            if (hoveredNodeEl) updateInfoPanelForNode(hoveredNodeEl);
+            // hover info disabled
         }
 
         function zoomIn() { zoomScale = Math.min(ZOOM_MAX, +(zoomScale + ZOOM_STEP).toFixed(2)); applyZoom(); }

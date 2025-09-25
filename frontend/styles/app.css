@@ -31,25 +31,21 @@ body { padding-top: 56px; background: #f3f4f6; font-family: -apple-system, Blink
 /* Layout */
 .container-app { height: calc(100vh - 56px); padding: 12px 16px; }
 .diagram-layout { display: flex; gap: 16px; height: calc(100vh - 86px); align-items: stretch; min-width: 0; }
-.diagram-layout.no-info-gap { gap: 0; }
 .diagram-main { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .flowchart-container { flex: 1 1 auto; min-height: 0; position: relative; background: #f9fafb; border: 2px solid #d1d5db; border-radius: .75rem; padding: 16px; }
 #flowchartDisplay { flex: 1 1 auto; min-height: 0; }
+
+/* Right panel card adjustments */
+#infoPanel { display: flex; flex-direction: column; }
+#infoPanelBody:empty { padding: 0; }
+#infoPanelFooter:empty { display: none; }
 
 /* Tab visibility */
 .main-tab-content { display: none; }
 .main-tab-content.active { display: block; }
 
-/* Info panel */
-.info-panel { flex: 0 0 auto; width: 360px; border: 1px solid #e5e7eb; border-radius: .75rem; background: #fff; padding: 0; display: flex; flex-direction: column; min-height: 0; }
-.info-panel.collapsed { width: 0; padding: 0; border: 0; overflow: visible; }
-.info-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; position: sticky; top: 0; background: #fff; padding-bottom: 6px; z-index: 1; }
-.info-panel > #infoPanelBody { overflow: auto; min-height: 0; }
-
-/* Make docked editors fill the panel without extra chrome */
-.info-panel #infoPanelBody { padding: 0; }
-.info-title { font-weight: 700; color: #1f2937; font-size: .95rem; margin: 0; }
-.info-subtitle { font-size: .7rem; color: #6b7280; margin-top: 2px; }
+/* Right panel now uses a plain Bootstrap card; custom .info-panel styles removed */
+/* Keep generic info list and section styles for hover summaries if used */
 .info-section { margin: 12px 0; font-size: .8rem; color: #374151; }
 .info-section + .info-section { border-top: 1px solid #f3f4f6; padding-top: 8px; }
 .info-list { list-style: none; padding: 0; margin: 6px 0 0 0; }
@@ -200,12 +196,11 @@ rect.connection-label-bg.selected { stroke: #2563eb !important; stroke-width: 1.
 .compact-row .editor-group { flex: 1 1 0; margin-bottom: 12px; }
 .editor-buttons { display: flex; gap: 12px; justify-content: end; margin-top: 20px; }
 
-/* Docked editor customizations */
+/* Docked editor inside the right card */
 .node-editor.docked { padding: 0; margin: 0; background: transparent; border: 0; border-radius: 0; }
 .node-editor.docked .editor-header { display: none; }
 .node-editor.docked .editor-content { padding: 0; max-height: none; overflow: visible; }
-.node-editor.docked .editor-buttons { position: sticky; bottom: 0; background: #fff; padding-top: 8px; margin-top: 16px; border-top: 1px solid #e5e7eb; }
-.node-editor.docked .accordion { padding-bottom: 72px; }
+.node-editor.docked .editor-buttons { padding: 0; margin: 0; border: 0; background: transparent; position: static; }
 
 /* Legacy docked accordion headers removed in favor of Bootstrap Accordion */
 
