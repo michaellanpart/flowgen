@@ -40,7 +40,20 @@
                 <div class="nav-dropdown-menu">
                     <div class="nav-menu-item" onclick="alignDiagram()">Align Diagram</div>
                     <div class="nav-sep"></div>
-
+                    <div class="nav-menu-item" style="cursor:default;">
+                        <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:6px;">Connector
+                            Routing</label>
+                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;">
+                            <input type="radio" name="navConnectorRouting" id="navRoutingStraight" value="straight"
+                                onchange="onNavbarConnectorRoutingChange(event)" />
+                            <span>Straight lines</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;">
+                            <input type="radio" name="navConnectorRouting" id="navRoutingOrthogonal" value="orthogonal"
+                                onchange="onNavbarConnectorRoutingChange(event)" />
+                            <span>90° turns</span>
+                        </label>
+                    </div>
                     <div class="nav-sep"></div>
                     <div class="nav-menu-item" style="cursor:default;">
                         <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:6px;">Info Panel</label>
@@ -453,6 +466,8 @@
         let gridOpacity = 0.3;
         let selectedNodeElement = null;
         let selectedEdgeId = null;
+        // Remember last-used connector sides per edge to reduce jitter while dragging
+        const edgeRoutingState = new Map(); // edgeId -> { fromSide, toSide }
         // Edge creation state: { sourceNodeId, sourceSide, startX, startY, previewLine }
         let edgeCreation = null;
 
@@ -3749,7 +3764,9 @@
             infoPanelMode: 'auto',
             // Feature flags: enable inline editing only, keep toolbar off
             inlineLabelEditingEnabled: true,
-            onCanvasToolbarEnabled: false
+            onCanvasToolbarEnabled: false,
+            // Connector routing: 'straight' (direct lines) or 'orthogonal' (90-degree turns)
+            connectorRouting: 'straight'
         };
         let appSettings = { ...defaultAppSettings };
 
@@ -3768,6 +3785,7 @@
             applySettings(false); // apply without forcing redraw
             // Also apply non-grid UI based on settings
             try { populateNavbarInfoPanelMode(); } catch (_) { }
+            try { populateNavbarConnectorRouting(); } catch (_) { }
         }
 
         function saveAppSettings() {
@@ -3835,6 +3853,23 @@
             applySettings(true);
             // Keep settings form (in Settings tab) in sync too
             populateSettingsForm();
+        }
+
+        // ===== Navbar: Connector Routing Mode =====
+        function populateNavbarConnectorRouting() {
+            const straight = document.getElementById('navRoutingStraight');
+            const orthogonal = document.getElementById('navRoutingOrthogonal');
+            const mode = appSettings.connectorRouting || 'straight';
+            if (straight) straight.checked = (mode === 'straight');
+            if (orthogonal) orthogonal.checked = (mode === 'orthogonal');
+        }
+        function onNavbarConnectorRoutingChange(e) {
+            const val = e && e.target ? e.target.value : 'straight';
+            appSettings.connectorRouting = (val === 'orthogonal') ? 'orthogonal' : 'straight';
+            saveAppSettingsSilent();
+            // Redraw all connections with the new routing mode
+            updateConnections();
+            showMessage(`Connector routing: ${appSettings.connectorRouting}`, 'info');
         }
 
         // ===== Navbar: Info Panel Mode =====
@@ -3950,6 +3985,7 @@
             populateRibbonGridControls();
             populateNavbarGridControls();
             populateNavbarInfoPanelMode();
+            populateNavbarConnectorRouting();
             // Force grid and snapping off by default (override any older saved setting)
             appSettings.gridEnabled = false;
             appSettings.snapToGrid = false;
@@ -4178,9 +4214,27 @@
             }
 
             return {
-                from: { x: fromPoint.x, y: fromPoint.y },
-                to: { x: toPoint.x, y: toPoint.y }
+                from: { x: fromPoint.x, y: fromPoint.y, side: fromPoint.side },
+                to: { x: toPoint.x, y: toPoint.y, side: toPoint.side }
             };
+        }
+
+        // Return all available connection points for a node with absolute positions and side metadata
+        function getNodeConnectionPoints(nodeId) {
+            const nodeElement = document.querySelector(`[data-node-id="${nodeId}"]`);
+            if (!nodeElement) return [];
+
+            const displayEl = document.getElementById('flowchartDisplay');
+            const displayRect = displayEl.getBoundingClientRect();
+            const cps = nodeElement.querySelectorAll('.connection-point');
+            const out = [];
+            cps.forEach(cp => {
+                const pr = cp.getBoundingClientRect();
+                const px = (((pr.left + pr.width / 2) - displayRect.left) + displayEl.scrollLeft) / (zoomScale || 1);
+                const py = (((pr.top + pr.height / 2) - displayRect.top) + displayEl.scrollTop) / (zoomScale || 1);
+                out.push({ x: px, y: py, side: cp?.dataset?.side });
+            });
+            return out;
         }
 
         function getEdgeRenderStyle(edge) {
@@ -4201,6 +4255,359 @@
                 strokeWidth: user.strokeWidth || defaults.strokeWidth,
                 strokeDasharray: user.strokeDasharray || defaults.strokeDasharray
             };
+        }
+
+        // Orthogonal pathfinding algorithm for 90-degree connector routing
+        function findOrthogonalPath(x1, y1, x2, y2, nodeObstacles, fromSide, toSide) {
+            const clearance = 15; // Minimum distance from node edges
+            const minSegmentLength = 20; // Minimum length for perpendicular segments
+
+            // Determine perpendicular directions based on connection sides
+            const fromDirection = getPerpendicularDirection(fromSide);
+            const toDirection = getPerpendicularDirection(toSide);            // Calculate the perpendicular exit points from both nodes
+            const exitPoint1 = {
+                x: x1 + fromDirection.x * minSegmentLength,
+                y: y1 + fromDirection.y * minSegmentLength
+            };
+            const exitPoint2 = {
+                x: x2 + toDirection.x * minSegmentLength,
+                y: y2 + toDirection.y * minSegmentLength
+            };
+
+            // Try direct connection if aligned and clear
+            if (canConnectDirectly(exitPoint1, exitPoint2, fromDirection, toDirection, nodeObstacles, clearance)) {
+                const path = createDirectPath(x1, y1, x2, y2, exitPoint1, exitPoint2, fromDirection, toDirection);
+                if (path.length >= 2) return path;
+            }
+
+            // Try L-shaped routing (minimal turns)
+            const lShapedPath = createLShapedPath(x1, y1, x2, y2, fromDirection, toDirection, nodeObstacles, clearance, minSegmentLength);
+            if (lShapedPath) return lShapedPath;
+
+            // Try U-shaped routing around obstacles
+            const uShapedPath = createUShapedPath(x1, y1, x2, y2, fromDirection, toDirection, nodeObstacles, clearance, minSegmentLength);
+            if (uShapedPath) return uShapedPath;
+
+            // Fallback: create a simple orthogonal path even if complex routing failed
+            return createSimpleOrthogonalPath(x1, y1, x2, y2, fromDirection, toDirection, minSegmentLength);
+        }
+
+        function getPerpendicularDirection(side) {
+            switch (side) {
+                case 'top': return { x: 0, y: -1 };
+                case 'bottom': return { x: 0, y: 1 };
+                case 'left': return { x: -1, y: 0 };
+                case 'right': return { x: 1, y: 0 };
+                default: return { x: 1, y: 0 }; // Default to right
+            }
+        }
+
+        function canConnectDirectly(point1, point2, dir1, dir2, obstacles, clearance) {
+            // Check if we can make a direct orthogonal connection
+            if (Math.abs(dir1.x) === Math.abs(dir2.x) && Math.abs(dir1.y) === Math.abs(dir2.y)) {
+                // Same axis - check if direct line is clear
+                return isSegmentClear(point1.x, point1.y, point2.x, point2.y, obstacles, clearance);
+            }
+            return false;
+        }
+
+        function createDirectPath(x1, y1, x2, y2, exit1, exit2, dir1, dir2) {
+            // For direct connections along the same axis
+            if (Math.abs(dir1.x) === Math.abs(dir2.x) && Math.abs(dir1.y) === Math.abs(dir2.y)) {
+                if (Math.abs(exit1.x - exit2.x) < 5) {
+                    // Vertical connection
+                    return [{ x: x1, y: y1 }, { x: exit1.x, y: exit1.y }, { x: exit2.x, y: exit2.y }, { x: x2, y: y2 }];
+                } else if (Math.abs(exit1.y - exit2.y) < 5) {
+                    // Horizontal connection
+                    return [{ x: x1, y: y1 }, { x: exit1.x, y: exit1.y }, { x: exit2.x, y: exit2.y }, { x: x2, y: y2 }];
+                }
+            }
+            return [];
+        }
+
+        function createLShapedPath(x1, y1, x2, y2, fromDir, toDir, obstacles, clearance, minLength) {
+            // Create L-shaped path with minimal turns
+            const exit1 = { x: x1 + fromDir.x * minLength, y: y1 + fromDir.y * minLength };
+
+            // Try different corner positions
+            const cornerOptions = [];
+
+            if (fromDir.x !== 0) {
+                // From horizontal direction
+                cornerOptions.push({ x: exit1.x, y: y2 + toDir.y * minLength });
+                cornerOptions.push({ x: x2 + toDir.x * minLength, y: exit1.y });
+            } else {
+                // From vertical direction  
+                cornerOptions.push({ x: x2 + toDir.x * minLength, y: exit1.y });
+                cornerOptions.push({ x: exit1.x, y: y2 + toDir.y * minLength });
+            }
+
+            for (const corner of cornerOptions) {
+                const exit2 = { x: x2 + toDir.x * minLength, y: y2 + toDir.y * minLength };
+                const path = [
+                    { x: x1, y: y1 },
+                    { x: exit1.x, y: exit1.y },
+                    { x: corner.x, y: corner.y },
+                    { x: exit2.x, y: exit2.y },
+                    { x: x2, y: y2 }
+                ];
+
+                if (isPathClear(path, obstacles, clearance)) {
+                    return path;
+                }
+            }
+
+            return null;
+        }
+
+        function createUShapedPath(x1, y1, x2, y2, fromDir, toDir, obstacles, clearance, minLength) {
+            // Create U-shaped path when L-shape doesn't work
+            const exit1 = { x: x1 + fromDir.x * minLength, y: y1 + fromDir.y * minLength };
+            const exit2 = { x: x2 + toDir.x * minLength, y: y2 + toDir.y * minLength };
+
+            // Find intermediate points that route around obstacles
+            const midX = (exit1.x + exit2.x) / 2;
+            const midY = (exit1.y + exit2.y) / 2;
+
+            // Try routing with intermediate waypoints
+            const pathOptions = [
+                [
+                    { x: x1, y: y1 },
+                    { x: exit1.x, y: exit1.y },
+                    { x: midX, y: exit1.y },
+                    { x: midX, y: exit2.y },
+                    { x: exit2.x, y: exit2.y },
+                    { x: x2, y: y2 }
+                ],
+                [
+                    { x: x1, y: y1 },
+                    { x: exit1.x, y: exit1.y },
+                    { x: exit1.x, y: midY },
+                    { x: exit2.x, y: midY },
+                    { x: exit2.x, y: exit2.y },
+                    { x: x2, y: y2 }
+                ]
+            ];
+
+            for (const path of pathOptions) {
+                if (isPathClear(path, obstacles, clearance)) {
+                    return path;
+                }
+            }
+
+            return null;
+        }
+
+        function createSimpleOrthogonalPath(x1, y1, x2, y2, fromDirection, toDirection, minLength) {
+            // Always leave and enter perpendicular to the surfaces via exit points
+            const exit1 = { x: x1 + fromDirection.x * minLength, y: y1 + fromDirection.y * minLength };
+            const exit2 = { x: x2 + toDirection.x * minLength, y: y2 + toDirection.y * minLength };
+
+            // Two L-shape variants; both end with exit2 -> target to ensure perpendicular entry
+            const optionA = [
+                { x: x1, y: y1 },
+                { x: exit1.x, y: exit1.y },
+                { x: exit1.x, y: exit2.y },
+                { x: exit2.x, y: exit2.y },
+                { x: x2, y: y2 }
+            ];
+            const optionB = [
+                { x: x1, y: y1 },
+                { x: exit1.x, y: exit1.y },
+                { x: exit2.x, y: exit1.y },
+                { x: exit2.x, y: exit2.y },
+                { x: x2, y: y2 }
+            ];
+
+            // Prefer the shorter Manhattan option (both are valid orthogonal paths)
+            const len = (pts) => pts.reduce((acc, p, i) => i ? acc + Math.abs(p.x - pts[i - 1].x) + Math.abs(p.y - pts[i - 1].y) : 0, 0);
+            return len(optionA) <= len(optionB) ? optionA : optionB;
+        }
+
+        function isPathClear(path, obstacles, clearance) {
+            for (let i = 0; i < path.length - 1; i++) {
+                const segment = {
+                    x1: path[i].x, y1: path[i].y,
+                    x2: path[i + 1].x, y2: path[i + 1].y
+                };
+
+                if (segmentIntersectsObstacles(segment, obstacles, clearance)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function isSegmentClear(x1, y1, x2, y2, obstacles, clearance) {
+            const segment = { x1, y1, x2, y2 };
+            return !segmentIntersectsObstacles(segment, obstacles, clearance);
+        }
+
+        // --- Utilities to ensure strictly orthogonal paths ---
+        function mergeColinearSegments(points) {
+            if (!points || points.length < 3) return points;
+            const out = [points[0]];
+            for (let i = 1; i < points.length - 1; i++) {
+                const a = out[out.length - 1];
+                const b = points[i];
+                const c = points[i + 1];
+                // If a-b-c are colinear horizontally or vertically, skip b
+                if ((a.x === b.x && b.x === c.x) || (a.y === b.y && b.y === c.y)) {
+                    continue;
+                }
+                out.push(b);
+            }
+            out.push(points[points.length - 1]);
+            return out;
+        }
+
+        function removeTinySegments(points, minLen = 1.0) {
+            if (!points || points.length < 2) return points;
+            const out = [points[0]];
+            for (let i = 1; i < points.length; i++) {
+                const prev = out[out.length - 1];
+                const curr = points[i];
+                const dist = Math.abs(curr.x - prev.x) + Math.abs(curr.y - prev.y);
+                if (dist < minLen) {
+                    // Skip tiny move by overwriting the last point to current (keep continuity)
+                    out[out.length - 1] = curr;
+                } else {
+                    out.push(curr);
+                }
+            }
+            return out;
+        }
+
+        function normalizeOrthogonalPath(points, epsilon = 0.75) {
+            if (!points || points.length < 2) return points || [];
+
+            const snap = (v) => Math.round(v);
+            const src = points.map(p => ({ x: snap(p.x), y: snap(p.y) }));
+
+            // Rebuild path: keep endpoints fixed, insert axis-aligned joints between them
+            const out = [src[0]];
+            for (let i = 1; i < src.length; i++) {
+                const prev = out[out.length - 1];
+                const target = src[i];
+                const dx = target.x - prev.x;
+                const dy = target.y - prev.y;
+
+                if (Math.abs(dx) <= epsilon && Math.abs(dy) <= epsilon) {
+                    // Same point (or tiny move) → collapse
+                    continue;
+                }
+
+                // Choose the dominant axis to travel first, then the other axis
+                if (Math.abs(dx) <= Math.abs(dy)) {
+                    // Go vertical then horizontal: (prev.x, target.y) then (target.x,target.y)
+                    // But avoid duplicate points if already aligned
+                    const mid = { x: prev.x, y: target.y };
+                    if (!(mid.x === prev.x && mid.y === prev.y)) out.push({ x: snap(mid.x), y: snap(mid.y) });
+                    if (!(target.x === out[out.length - 1].x && target.y === out[out.length - 1].y)) out.push({ x: target.x, y: target.y });
+                } else {
+                    // Go horizontal then vertical: (target.x, prev.y) then (target.x,target.y)
+                    const mid = { x: target.x, y: prev.y };
+                    if (!(mid.x === prev.x && mid.y === prev.y)) out.push({ x: snap(mid.x), y: snap(mid.y) });
+                    if (!(target.x === out[out.length - 1].x && target.y === out[out.length - 1].y)) out.push({ x: target.x, y: target.y });
+                }
+            }
+
+            // Cleanup
+            let cleaned = removeTinySegments(out, 1.0);
+            cleaned = mergeColinearSegments(cleaned);
+            // Ensure last point is exactly the original last endpoint
+            const last = src[src.length - 1];
+            if (cleaned.length === 0 || cleaned[cleaned.length - 1].x !== last.x || cleaned[cleaned.length - 1].y !== last.y) {
+                cleaned.push({ x: last.x, y: last.y });
+            }
+            return cleaned;
+        }
+
+        function segmentIntersectsObstacles(segment, obstacles, clearance) {
+            const { x1, y1, x2, y2 } = segment;
+            const minX = Math.min(x1, x2) - clearance;
+            const maxX = Math.max(x1, x2) + clearance;
+            const minY = Math.min(y1, y2) - clearance;
+            const maxY = Math.max(y1, y2) + clearance;
+
+            for (const obs of obstacles) {
+                const obsLeft = obs.x;
+                const obsRight = obs.x + obs.w;
+                const obsTop = obs.y;
+                const obsBottom = obs.y + obs.h;
+
+                // Check if expanded segment rectangle intersects with obstacle
+                if (maxX >= obsLeft && minX <= obsRight &&
+                    maxY >= obsTop && minY <= obsBottom) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function routeAroundObstacles(x1, y1, x2, y2, obstacles, gap) {
+            // Find obstacles that block the direct horizontal-first or vertical-first paths
+            const blockingObstacles = obstacles.filter(obs => {
+                const obsLeft = obs.x - gap;
+                const obsRight = obs.x + obs.w + gap;
+                const obsTop = obs.y - gap;
+                const obsBottom = obs.y + obs.h + gap;
+
+                // Check if obstacle blocks horizontal-first path
+                const hPath = [
+                    { x: x1, y: y1 },
+                    { x: x2, y: y1 },
+                    { x: x2, y: y2 }
+                ];
+
+                // Check if obstacle blocks vertical-first path
+                const vPath = [
+                    { x: x1, y: y1 },
+                    { x: x1, y: y2 },
+                    { x: x2, y: y2 }
+                ];
+
+                return !isPathClear(hPath, [obs], gap) || !isPathClear(vPath, [obs], gap);
+            });
+
+            if (blockingObstacles.length === 0) {
+                // No blocking obstacles, use simple horizontal-first routing
+                return [{ x: x1, y: y1 }, { x: x2, y: y1 }, { x: x2, y: y2 }];
+            }
+
+            // Route around the first blocking obstacle
+            const obs = blockingObstacles[0];
+            const obsLeft = obs.x - gap;
+            const obsRight = obs.x + obs.w + gap;
+            const obsTop = obs.y - gap;
+            const obsBottom = obs.y + obs.h + gap;
+
+            // Determine best routing direction based on obstacle position relative to start/end points
+            const goRight = x2 > x1;
+            const goDown = y2 > y1;
+
+            let routeX, routeY;
+
+            if (goRight) {
+                routeX = obsRight;
+            } else {
+                routeX = obsLeft;
+            }
+
+            if (goDown) {
+                routeY = obsBottom;
+            } else {
+                routeY = obsTop;
+            }
+
+            // Create path routing around the obstacle
+            return [
+                { x: x1, y: y1 },
+                { x: x1, y: routeY },
+                { x: routeX, y: routeY },
+                { x: routeX, y: y2 },
+                { x: x2, y: y2 }
+            ];
         }
 
         function drawEdge(svg, fromNode, toNode, edge) {
@@ -4225,31 +4632,177 @@
 
             const style = getEdgeRenderStyle(edge);
             const edgeId = edge.id || `${edge.from}-${edge.to}`;
-            // Direct: from shape edge to shape edge
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', x1);
-            line.setAttribute('y1', y1);
-            line.setAttribute('x2', x2);
-            line.setAttribute('y2', y2);
-            line.setAttribute('class', 'connection-line');
-            line.setAttribute('data-edge-id', edgeId);
-            line.setAttribute('stroke', style.stroke);
-            line.setAttribute('stroke-width', style.strokeWidth);
-            if (style.strokeDasharray) line.setAttribute('stroke-dasharray', style.strokeDasharray);
-            // Interactivity
-            line.style.cursor = 'pointer';
-            line.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                const id = line.getAttribute('data-edge-id');
-                if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
-                selectEdge(id);
-            });
-            line.addEventListener('dblclick', (ev) => { ev.stopPropagation(); openEdgeEditor(line.getAttribute('data-edge-id')); });
-            svg.appendChild(line);
+
+            // Determine routing mode
+            const routingMode = appSettings.connectorRouting || 'straight';
+            let pathPoints = [{ x: x1, y: y1 }, { x: x2, y: y2 }]; // Default to straight line
+
+            if (routingMode === 'orthogonal') {
+                // Get obstacle information for pathfinding
+                const nodeObstacles = Array.from(document.querySelectorAll('#flowchartDisplay .node')).map(nodeEl => ({
+                    x: parseInt(nodeEl.style.left) || 0,
+                    y: parseInt(nodeEl.style.top) || 0,
+                    w: nodeEl.offsetWidth,
+                    h: nodeEl.offsetHeight
+                }));
+
+                // Evaluate all side combinations to pick minimal-turn, minimal-length path
+                const fromCPs = getNodeConnectionPoints(fromNode.id);
+                const toCPs = getNodeConnectionPoints(toNode.id);
+
+                let best = null; // { path, from, to, turns, length }
+                const prevSides = edgeRoutingState.get(edgeId) || null;
+                const sideChangePenalty = draggedNode ? 60 : 30; // be stickier while dragging
+
+                function scorePath(path, fSide, tSide) {
+                    // Count turns (number of interior vertices where both dx and dy change)
+                    let turns = 0;
+                    for (let i = 1; i < path.length - 1; i++) {
+                        const a = path[i - 1];
+                        const b = path[i];
+                        const c = path[i + 1];
+                        const abH = (a.y === b.y);
+                        const bcH = (b.y === c.y);
+                        if (abH !== bcH) turns++;
+                    }
+                    // Manhattan length
+                    let length = 0;
+                    for (let i = 0; i < path.length - 1; i++) {
+                        length += Math.abs(path[i + 1].x - path[i].x) + Math.abs(path[i + 1].y - path[i].y);
+                    }
+                    // Add hysteresis to avoid flapping between sides during drag
+                    let penalty = 0;
+                    if (prevSides) {
+                        if (fSide && prevSides.fromSide && fSide !== prevSides.fromSide) penalty += sideChangePenalty;
+                        if (tSide && prevSides.toSide && tSide !== prevSides.toSide) penalty += sideChangePenalty;
+                    }
+                    return { turns, length: length + penalty };
+                }
+
+                for (const f of fromCPs) {
+                    for (const t of toCPs) {
+                        if (!f.side || !t.side) continue;
+                        const p = findOrthogonalPath(f.x, f.y, t.x, t.y, nodeObstacles, f.side, t.side);
+                        if (!p || p.length < 2) continue;
+                        // Ensure the path is clear of obstacles
+                        if (!isPathClear(p, nodeObstacles, 15)) continue;
+                        const s = scorePath(p, f.side, t.side);
+                        if (!best || s.turns < best.turns || (s.turns === best.turns && s.length < best.length)) {
+                            best = { path: p, from: f, to: t, ...s };
+                        }
+                    }
+                }
+
+                if (best) {
+                    pathPoints = best.path;
+                    // Persist chosen sides for stability across frames
+                    edgeRoutingState.set(edgeId, { fromSide: best.from.side, toSide: best.to.side });
+                } else {
+                    // Fallback to previously chosen points if no combination produced a valid path
+                    pathPoints = findOrthogonalPath(x1, y1, x2, y2, nodeObstacles, connectionPoints.from.side, connectionPoints.to.side);
+                }
+                // Normalize to strictly orthogonal segments and merge tiny/colinear segments
+                pathPoints = normalizeOrthogonalPath(pathPoints);
+            }
+
+            // Create path element(s) based on routing mode
+            if (pathPoints.length === 2 && routingMode === 'straight') {
+                // Simple straight line
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', pathPoints[0].x);
+                line.setAttribute('y1', pathPoints[0].y);
+                line.setAttribute('x2', pathPoints[1].x);
+                line.setAttribute('y2', pathPoints[1].y);
+                line.setAttribute('class', 'connection-line');
+                line.setAttribute('data-edge-id', edgeId);
+                line.setAttribute('stroke', style.stroke);
+                line.setAttribute('stroke-width', style.strokeWidth);
+                if (style.strokeDasharray) line.setAttribute('stroke-dasharray', style.strokeDasharray);
+                // Interactivity
+                line.style.cursor = 'pointer';
+                line.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    const id = line.getAttribute('data-edge-id');
+                    if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
+                    selectEdge(id);
+                });
+                line.addEventListener('dblclick', (ev) => { ev.stopPropagation(); openEdgeEditor(line.getAttribute('data-edge-id')); });
+                svg.appendChild(line);
+            } else {
+                // Multi-segment path using polyline or multiple lines
+                for (let i = 0; i < pathPoints.length - 1; i++) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', pathPoints[i].x);
+                    line.setAttribute('y1', pathPoints[i].y);
+                    line.setAttribute('x2', pathPoints[i + 1].x);
+                    line.setAttribute('y2', pathPoints[i + 1].y);
+                    line.setAttribute('class', 'connection-line');
+                    line.setAttribute('data-edge-id', edgeId);
+                    line.setAttribute('stroke', style.stroke);
+                    line.setAttribute('stroke-width', style.strokeWidth);
+                    if (style.strokeDasharray) line.setAttribute('stroke-dasharray', style.strokeDasharray);
+                    // Interactivity - each segment should be clickable
+                    line.style.cursor = 'pointer';
+                    line.addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        const id = line.getAttribute('data-edge-id');
+                        if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
+                        selectEdge(id);
+                    });
+                    line.addEventListener('dblclick', (ev) => { ev.stopPropagation(); openEdgeEditor(line.getAttribute('data-edge-id')); });
+                    svg.appendChild(line);
+                }
+            }
 
 
-            // Add arrowhead (adjusted for edge connection)
-            const arrowhead = createArrowhead(svg, x1, y1, x2, y2, style.stroke);
+            // Add arrowhead at the end of the path
+            const lastPoint = pathPoints[pathPoints.length - 1];
+            let secondLastPoint = pathPoints[pathPoints.length - 2];
+
+            // For orthogonal paths, ensure arrowhead points toward the actual connection point
+            if (routingMode === 'orthogonal' && pathPoints.length > 2) {
+                // Find the last segment that has significant length to get proper direction
+                for (let i = pathPoints.length - 2; i >= 0; i--) {
+                    const dist = Math.hypot(pathPoints[i].x - lastPoint.x, pathPoints[i].y - lastPoint.y);
+                    if (dist > 5) { // Minimum distance to get meaningful direction
+                        secondLastPoint = pathPoints[i];
+                        break;
+                    }
+                }
+            }
+
+            // For orthogonal mode, quantize arrow direction to exact axis based on chosen toSide if available
+            let arrowFromX = secondLastPoint.x, arrowFromY = secondLastPoint.y;
+            if (routingMode === 'orthogonal') {
+                const state = edgeRoutingState && edgeRoutingState.get(edgeId);
+                const side = state && state.toSide ? state.toSide : null;
+                if (side === 'left') {
+                    // Approach left side from the left -> heading +X into the node
+                    arrowFromX = lastPoint.x - 10; arrowFromY = lastPoint.y;
+                } else if (side === 'right') {
+                    // Approach right side from the right -> heading -X into the node
+                    arrowFromX = lastPoint.x + 10; arrowFromY = lastPoint.y;
+                } else if (side === 'top') {
+                    // Approach top side from above -> heading +Y into the node (SVG Y grows downwards)
+                    arrowFromX = lastPoint.x; arrowFromY = lastPoint.y - 10;
+                } else if (side === 'bottom') {
+                    // Approach bottom side from below -> heading -Y into the node
+                    arrowFromX = lastPoint.x; arrowFromY = lastPoint.y + 10;
+                } else {
+                    // Fallback: clamp to nearest axis from computed segment
+                    const dx = lastPoint.x - secondLastPoint.x;
+                    const dy = lastPoint.y - secondLastPoint.y;
+                    if (Math.abs(dx) >= Math.abs(dy)) {
+                        // horizontal
+                        arrowFromY = lastPoint.y;
+                    } else {
+                        // vertical
+                        arrowFromX = lastPoint.x;
+                    }
+                }
+            }
+
+            const arrowhead = createArrowhead(svg, arrowFromX, arrowFromY, lastPoint.x, lastPoint.y, style.stroke);
             arrowhead.setAttribute('class', 'connection-arrowhead');
             arrowhead.setAttribute('data-edge-id', edgeId);
             arrowhead.setAttribute('pointer-events', 'auto');
@@ -4266,9 +4819,45 @@
 
             // Add edge label if present
             if (edge.name) {
-                // Label midpoint on the direct segment
-                const midX = (x1 + x2) / 2;
-                const midY = (y1 + y2) / 2;
+                // Calculate label position based on path type
+                let labelMidX, labelMidY, labelLen, labelTx, labelTy, labelNx, labelNy;
+
+                if (pathPoints.length === 2) {
+                    // Straight line - use midpoint
+                    labelMidX = (pathPoints[0].x + pathPoints[1].x) / 2;
+                    labelMidY = (pathPoints[0].y + pathPoints[1].y) / 2;
+                    const dx = pathPoints[1].x - pathPoints[0].x;
+                    const dy = pathPoints[1].y - pathPoints[0].y;
+                    labelLen = Math.max(1, Math.hypot(dx, dy));
+                    labelTx = dx / labelLen; labelTy = dy / labelLen;
+                    labelNx = -labelTy; labelNy = labelTx;
+                } else {
+                    // Orthogonal path - use midpoint of longest segment
+                    let longestSegment = 0;
+                    let longestLength = 0;
+
+                    for (let i = 0; i < pathPoints.length - 1; i++) {
+                        const dx = pathPoints[i + 1].x - pathPoints[i].x;
+                        const dy = pathPoints[i + 1].y - pathPoints[i].y;
+                        const segLen = Math.hypot(dx, dy);
+                        if (segLen > longestLength) {
+                            longestLength = segLen;
+                            longestSegment = i;
+                        }
+                    }
+
+                    // Use midpoint of longest segment
+                    const p1 = pathPoints[longestSegment];
+                    const p2 = pathPoints[longestSegment + 1];
+                    labelMidX = (p1.x + p2.x) / 2;
+                    labelMidY = (p1.y + p2.y) / 2;
+
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    labelLen = Math.max(1, Math.hypot(dx, dy));
+                    labelTx = dx / labelLen; labelTy = dy / labelLen;
+                    labelNx = -labelTy; labelNy = labelTx;
+                }
 
                 // Create and append text first so getBBox measures correctly
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -4300,23 +4889,17 @@
                 const rectW = textW + padX * 2;
                 const rectH = textH + padY * 2;
 
-                // Compute edge basis vectors
-                const dx = x2 - x1, dy = y2 - y1;
-                const len = Math.max(1, Math.hypot(dx, dy));
-                const tx = dx / len, ty = dy / len; // unit tangent
-                const nx = -ty, ny = tx; // unit normal
-
                 // If we have a stored relative offset, respect it; else compute a default
                 let centerX, centerY, dirX, dirY;
                 const stored = edge.metadata && edge.metadata.labelOffset;
                 if (stored && typeof stored.along === 'number' && typeof stored.perp === 'number') {
-                    const alongPx = stored.along * len;
-                    const perpPx = stored.perp * len;
-                    centerX = midX + tx * alongPx + nx * perpPx;
-                    centerY = midY + ty * alongPx + ny * perpPx;
+                    const alongPx = stored.along * labelLen;
+                    const perpPx = stored.perp * labelLen;
+                    centerX = labelMidX + labelTx * alongPx + labelNx * perpPx;
+                    centerY = labelMidY + labelTy * alongPx + labelNy * perpPx;
                     // For nudging if needed, prefer the normal direction of the stored sign
                     const s = Math.sign(stored.perp) || 1;
-                    dirX = nx * s; dirY = ny * s;
+                    dirX = labelNx * s; dirY = labelNy * s;
                 } else {
                     // Choose the normal that is farther from both node centers
                     function minDistToNodes(cx, cy) {
@@ -4325,15 +4908,15 @@
                         return Math.min(d1, d2);
                     }
                     const baseOffset = 10;
-                    const cand1 = { cx: midX + nx * baseOffset, cy: midY + ny * baseOffset };
-                    const cand2 = { cx: midX + -nx * baseOffset, cy: midY + -ny * baseOffset };
+                    const cand1 = { cx: labelMidX + labelNx * baseOffset, cy: labelMidY + labelNy * baseOffset };
+                    const cand2 = { cx: labelMidX + -labelNx * baseOffset, cy: labelMidY + -labelNy * baseOffset };
                     const pick1 = minDistToNodes(cand1.cx, cand1.cy);
                     const pick2 = minDistToNodes(cand2.cx, cand2.cy);
                     const useFirst = pick1 >= pick2;
                     centerX = useFirst ? cand1.cx : cand2.cx;
                     centerY = useFirst ? cand1.cy : cand2.cy;
-                    dirX = useFirst ? nx : -nx;
-                    dirY = useFirst ? ny : -ny;
+                    dirX = useFirst ? labelNx : -labelNx;
+                    dirY = useFirst ? labelNy : -labelNy;
                 }
 
                 // Initial rect position
@@ -4416,12 +4999,12 @@
                         const nyY = parseFloat(rect.getAttribute('y'));
                         const cX = nxX + rectW / 2;
                         const cY = nyY + rectH / 2;
-                        const dxc = cX - midX;
-                        const dyc = cY - midY;
-                        const along = dxc * tx + dyc * ty; // projection onto tangent
-                        const perp = dxc * nx + dyc * ny;   // projection onto normal
-                        const aRel = along / len;
-                        const pRel = perp / len;
+                        const dxc = cX - labelMidX;
+                        const dyc = cY - labelMidY;
+                        const along = dxc * labelTx + dyc * labelTy; // projection onto tangent
+                        const perp = dxc * labelNx + dyc * labelNy;   // projection onto normal
+                        const aRel = along / labelLen;
+                        const pRel = perp / labelLen;
                         edge.metadata = edge.metadata || {};
                         edge.metadata.labelOffset = { along: aRel, perp: pRel };
                         hasUnsavedChanges = true;
