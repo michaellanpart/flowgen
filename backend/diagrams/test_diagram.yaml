@@ -12,7 +12,7 @@ nodes:
       width: 77
       height: 77
     style:
-      fill: '#3498DB'
+      fill: '#CCCCCC'
   - id: connector_1758492243168
     name: New Step
     type: process
@@ -39,7 +39,7 @@ nodes:
     name: New Step 3
     type: process
     position:
-      x: 498
+      x: 500
       y: 230
     dimensions:
       width: 117
@@ -100,8 +100,8 @@ nodes:
       width: 143
       height: 60
     style:
-      fill: '#3498DB'
-  - id: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758719264862
+      fill: '#CCCCCC'
+  - id: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758720829216
     name: New Step
     type: process
     position:
@@ -111,7 +111,7 @@ nodes:
       width: 105
       height: 60
     style:
-      fill: '#3498DB'
+      fill: '#CCCCCC'
 edges:
   - id: connector_1758492243168-connector_1758492243168_step_1758498517717-1758498517718
     name: ""
@@ -177,27 +177,19 @@ edges:
     style:
       stroke: '#34495e'
       strokeWidth: 2
-  - id: connector_1758492243168_step_1758498517717_step_1758503642983-connector_1758492243168_step_1758498517717_step_1758503642983_step_1758719264862-1758719264862
-    name: ""
-    type: ""
-    from: connector_1758492243168_step_1758498517717_step_1758503642983
-    to: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758719264862
-    style:
-      stroke: '#34495e'
-      strokeWidth: 2
-  - id: connector_1758492243168_step_1758498517717_step_1758503642983-connector_1758492243168_step_1758498517717_step_1758503642983_step_1758719264862-1758720542920
-    name: ""
-    type: ""
-    from: connector_1758492243168_step_1758498517717_step_1758503642983
-    to: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758719264862
-    style:
-      stroke: '#34495e'
-      strokeWidth: 2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758720555134
     name: ""
     type: ""
     from: connector_1758492243168_step_1758498517717
     to: connector_1758492243168_step_1758498517717_step_1758503642983
+    style:
+      stroke: '#34495e'
+      strokeWidth: 2
+  - id: connector_1758492243168_step_1758498517717_step_1758503642983-connector_1758492243168_step_1758498517717_step_1758503642983_step_1758720829216-1758720829216
+    name: ""
+    type: ""
+    from: connector_1758492243168_step_1758498517717_step_1758503642983
+    to: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758720829216
     style:
       stroke: '#34495e'
       strokeWidth: 2
@@ -207,4 +199,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-24T08:29:15.141182-05:00
+updated: 2025-09-24T20:18:35.381638-05:00
