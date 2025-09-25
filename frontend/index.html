@@ -8,6 +8,42 @@
     integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 <!-- App styles -->
 <link rel="stylesheet" href="/static/styles/app.css" />
+<style>
+    /* Minimal, unobtrusive autosave status styles */
+    .nav-status {
+        margin-left: 12px;
+        font-size: 12px;
+        color: #6b7280;
+        /* gray-500 */
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    .nav-status.hidden {
+        display: none;
+    }
+
+    .nav-status.dirty {
+        color: #d97706;
+    }
+
+    /* amber-600 */
+    .nav-status.saving {
+        color: #2563eb;
+    }
+
+    /* blue-600 */
+    .nav-status.saved {
+        color: #059669;
+    }
+
+    /* emerald-600 */
+    .nav-status.error {
+        color: #dc2626;
+    }
+
+    /* red-600 */
+</style>
 </head>
 
 <body>
@@ -76,6 +112,7 @@
         <div class="nav-spacer"></div>
         <div class="nav-section">
             <button class="nav-btn primary" id="navbarSaveBtn" onclick="saveDiagram(false, true)">Save</button>
+            <span id="autosaveStatus" class="nav-status" aria-live="polite" title="Autosave status"></span>
         </div>
     </nav>
     <div class="container-fluid p-3">
@@ -485,6 +522,8 @@
         let editingNodeElement = null;
         // Node editor docking state
         let editorDocked = false;
+        // Last successful save timestamp
+        let lastSavedAt = null;
 
         // Grid and Layout Settings
         let gridEnabled = false;
@@ -913,6 +952,8 @@
 
                 if (data.diagrams && data.diagrams.length > 0) {
                     currentDiagram = normalizeDiagramNumbers(data.diagrams[0]); // Use first diagram and normalize
+                    // Remember which diagram we loaded so refresh restores the same one
+                    try { setLastOpenedDiagramId(data.diagrams[0].id || ''); } catch (_) { }
 
                     renderFlowchart(currentDiagram);
                     updateDiagramInfoBox();
@@ -1175,22 +1216,6 @@
             // Update connections one final time
             updateConnections();
 
-            // Clean up
-            if (dragUpdateTimer) {
-                clearTimeout(dragUpdateTimer);
-                dragUpdateTimer = null;
-            }
-            draggedNode = null;
-
-            // Remove global event listeners
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            document.removeEventListener('touchmove', handleTouchMove);
-            document.removeEventListener('touchend', handleTouchEnd);
-
-            // Re-enable text selection
-            document.body.style.userSelect = '';
-
             // If position actually changed, mark dirty and autosave
             const origLeft = parseInt(draggedNode.dataset.origLeft || '0');
             const origTop = parseInt(draggedNode.dataset.origTop || '0');
@@ -1202,11 +1227,29 @@
 
             if (origLeft !== newLeft || origTop !== newTop) {
                 hasUnsavedChanges = true;
-                document.getElementById('saveButton').classList.add('show');
+                const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
                 scheduleAutoSave();
                 // Immediate silent autosave for position changes
                 saveDiagram(true);
             }
+
+            // Clean up
+            if (dragUpdateTimer) {
+                clearTimeout(dragUpdateTimer);
+                dragUpdateTimer = null;
+            }
+
+            // Remove global event listeners
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchmove', handleTouchMove);
+            document.removeEventListener('touchend', handleTouchEnd);
+
+            // Re-enable text selection
+            document.body.style.userSelect = '';
+
+            // Finally, clear draggedNode reference
+            draggedNode = null;
         }
 
         function updateDiagramData() {
@@ -1364,20 +1407,72 @@
             if (!autosaveEnabled) return;
             if (!hasUnsavedChanges) return;
             try { clearTimeout(autosaveTimer); } catch (_) { }
+            // Update nav status: pending autosave
+            updateAutosaveStatus('pending');
             autosaveTimer = setTimeout(() => {
                 // Silent autosave to avoid UI noise
+                updateAutosaveStatus('saving');
                 saveDiagram(true);
             }, autosaveDelay);
         }
 
-        async function saveDiagram(silent = false, force = false) {
+        // ===== Autosave status indicator helper =====
+        // States: 'hidden' | 'dirty' | 'pending' | 'saving' | 'saved' | 'error'
+        function updateAutosaveStatus(state) {
+            const el = document.getElementById('autosaveStatus');
+            if (!el) return;
+            const cls = ['hidden', 'dirty', 'pending', 'saving', 'saved', 'error'];
+            cls.forEach(c => el.classList.remove(c));
+            el.classList.add(state);
+            switch (state) {
+                case 'hidden':
+                    el.textContent = '';
+                    break;
+                case 'dirty':
+                    el.textContent = 'Unsaved changes';
+                    break;
+                case 'pending':
+                    el.textContent = 'Auto-saving soon…';
+                    break;
+                case 'saving':
+                    el.textContent = 'Saving…';
+                    break;
+                case 'saved':
+                    el.textContent = 'Auto-saved';
+                    // Fade back to hidden after a short delay
+                    setTimeout(() => {
+                        // Only hide if not dirty again
+                        if (hasUnsavedChanges) return;
+                        updateAutosaveStatus('hidden');
+                    }, 2000);
+                    break;
+                case 'error':
+                    el.textContent = 'Save failed';
+                    break;
+            }
+        }
+
+        // No special delete delay; deletes trigger an immediate forced save.
+
+        // Serialize saves to avoid out-of-order overwrites on the server
+        let _saveQueue = window._saveQueue || Promise.resolve();
+        window._saveQueue = _saveQueue;
+
+        async function _performSave(silent = false, force = false) {
             if (!currentDiagram) return;
             if (!hasUnsavedChanges && !force) return;
 
             try {
                 if (!silent) showMessage('Saving diagram...', 'info');
+                // Reflect saving state in navbar
+                updateAutosaveStatus('saving');
 
                 const payload = getDiagramForSave(currentDiagram);
+                // Simple fingerprint for consistency check after re-fetch
+                const expectedCounts = {
+                    nodes: Array.isArray(payload.nodes) ? payload.nodes.length : 0,
+                    edges: Array.isArray(payload.edges) ? payload.edges.length : 0
+                };
                 const response = await fetch(`http://localhost:3001/api/v1/diagrams/${currentDiagram.id}`, {
                     method: 'PUT',
                     headers: {
@@ -1393,20 +1488,38 @@
                     const sb = document.getElementById('saveButton');
                     if (sb) sb.classList.remove('show');
                     if (!silent) showMessage('Diagram saved successfully!', 'success');
+                    updateAutosaveStatus('saved');
+                    // Track last save time for UI
+                    lastSavedAt = new Date();
+                    // Persist last-opened diagram id on successful save so reload restores this one
+                    try { if (currentDiagram && currentDiagram.id) setLastOpenedDiagramId(currentDiagram.id); } catch (_) { }
                     if (!silent) {
                         // Re-fetch latest diagram from backend to reflect any canonicalization/normalization
                         try {
-                            const res2 = await fetch(`http://localhost:3001/api/v1/diagrams/${currentDiagram.id}`);
-                            if (res2.ok) {
-                                const fresh = await res2.json();
+                            // Retry a couple of times to allow backend to fully persist before re-read
+                            let attempts = 0;
+                            let fresh = null;
+                            while (attempts < 3) {
+                                const res2 = await fetch(`http://localhost:3001/api/v1/diagrams/${currentDiagram.id}`);
+                                if (res2.ok) {
+                                    const d = await res2.json();
+                                    const nn = Array.isArray(d.nodes) ? d.nodes.length : 0;
+                                    const ee = Array.isArray(d.edges) ? d.edges.length : 0;
+                                    if (nn === expectedCounts.nodes && ee === expectedCounts.edges) {
+                                        fresh = d;
+                                        break;
+                                    }
+                                }
+                                // Small backoff before retrying
+                                await new Promise(r => setTimeout(r, 200));
+                                attempts++;
+                            }
+                            if (fresh) {
                                 currentDiagram = normalizeDiagramNumbers(fresh);
                                 renderFlowchart(currentDiagram);
                                 updateConnections();
-                                updateDiagramInfoBox();
-                            } else {
-                                // Fallback to updating info only
-                                updateDiagramInfoBox();
                             }
+                            updateDiagramInfoBox();
                         } catch (_) {
                             updateDiagramInfoBox();
                         }
@@ -1420,27 +1533,27 @@
                         updateDiagramInfoBox();
                     }
                 } else {
-                    let msg = 'Save failed';
-                    try { const error = await response.json(); msg = `Save failed: ${error.error}`; } catch (_) { }
-                    if (!silent) showMessage(msg, 'error');
-                    else {
-                        console.error(msg);
-                        // Surface silent autosave failures so users know persistence didn’t occur
-                        showMessage(msg, 'error');
-                    }
+                    updateAutosaveStatus('error');
+                    const errText = await response.text().catch(() => '');
+                    throw new Error(`Save failed: ${response.status} ${errText}`);
                 }
-            } catch (error) {
-                const msg = `Save error: ${error.message}`;
-                if (!silent) showMessage(msg, 'error');
-                else {
-                    console.error(msg);
-                    // Surface silent autosave failures
-                    showMessage(msg, 'error');
-                }
+            } catch (err) {
+                console.error('Error saving diagram:', err);
+                if (!silent) showMessage('Error saving diagram', 'danger');
+                updateAutosaveStatus('error');
             } finally {
                 try { clearTimeout(autosaveTimer); } catch (_) { }
                 autosaveTimer = null;
             }
+        }
+
+        // Public save function: queue saves sequentially to avoid races
+        function saveDiagram(silent = false, force = false) {
+            const run = () => _performSave(silent, force);
+            // Chain regardless of previous state to keep queue intact
+            _saveQueue = _saveQueue.then(run, run);
+            window._saveQueue = _saveQueue;
+            return _saveQueue;
         }
 
         function showMessage(text, type) {
@@ -1524,11 +1637,13 @@
             const version = d.version ? `v${d.version}` : '';
             const filePath = d.FilePath || d.filePath || '';
             const baseName = filePath ? (filePath.split(/[\\/]/).pop() || '') : '';
+            const savedText = lastSavedAt ? `<br/><span style='color:#16a34a;'>Last saved:</span> ${new Date(lastSavedAt).toLocaleTimeString()}` : '';
             box.innerHTML = `
                 <div style="font-weight:600;font-size:13px;color:#2c3e50;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${name}${filePath ? ` — ${filePath}` : ''}">${name}${id} ${version ? `<span style='color:#95a5a6;'>${version}</span>` : ''}</div>
                 <div style="font-size:12px;color:#2c3e50;">
                     <strong>Nodes:</strong> ${nodes} · <strong>Edges:</strong> ${edges}<br/>
                     <strong>Layout:</strong> ${layout}${baseName ? ` · <span title='${filePath}'>${baseName}</span>` : ''}
+                    ${savedText}
                 </div>
             `;
         }
@@ -1853,9 +1968,10 @@
                 updateConnections();
                 hasUnsavedChanges = true;
                 document.getElementById('saveButton').classList.add('show');
-                scheduleAutoSave();
-                // Immediate autosave on connector delete (force save)
-                await saveDiagram(true, true);
+                // Cancel any pending autosave and persist immediately
+                try { clearTimeout(autosaveTimer); } catch (_) { }
+                updateAutosaveStatus('saving');
+                await saveDiagram(false, true);
                 showMessage('Connector removed', 'success');
                 updateDiagramInfoBox();
             }
@@ -2501,7 +2617,8 @@
             // Initialize color picker selection and favorites
             renderFavoriteColors();
             const currentColor = node.style?.fill || getNodeTypeColor(node.type);
-            setSelectedColor(currentColor);
+            // UI-only initialization (do not mutate the node or trigger autosave)
+            setSelectedColor(currentColor, { applyToNode: false });
             // Bind palette clicks (favorites are bound in renderFavoriteColors)
             document.querySelectorAll('#fillColorGrid .color-option').forEach(option => {
                 option.onclick = () => {
@@ -2578,10 +2695,9 @@
         }
 
         async function confirmDeleteCurrentNode() {
-            if (!editingNode || !editingNodeElement) return;
-            if (confirm('Delete this node and its connections?')) {
-                await deleteNode(editingNode, editingNodeElement);
-            }
+            deleteNode(editingNode, editingNodeElement);
+            saveDiagram(true);
+            closeNodeEditor();
         }
 
         function saveNodeChanges() {
@@ -2917,7 +3033,8 @@
             const cmd = e.metaKey || e.ctrlKey;
             if (cmd && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
                 e.preventDefault();
-                saveDiagram(false);
+                // Force a save so users always get a confirmation toast even if autosave already cleared the dirty flag
+                saveDiagram(false, true);
             } else if (cmd && e.shiftKey && (e.key === 's' || e.key === 'S')) {
                 e.preventDefault();
                 openSaveAsModal();
@@ -2956,10 +3073,11 @@
 
             // Mark as changed
             hasUnsavedChanges = true;
-            document.getElementById('saveButton').classList.add('show');
-            scheduleAutoSave();
-            // Immediate autosave on delete (force even if flags not set yet)
-            await saveDiagram(true, true);
+            const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
+            // Cancel any pending autosave and persist immediately
+            try { clearTimeout(autosaveTimer); } catch (_) { }
+            updateAutosaveStatus('saving');
+            await saveDiagram(false, true);
 
             closeNodeEditor();
             showMessage('Node deleted successfully!', 'success');
@@ -4115,7 +4233,7 @@
 
         // Removed the Add Step (+) overlay in favor of double-clicking connection points
 
-        function addStepFromNode(sourceNodeId, side, newType) {
+        async function addStepFromNode(sourceNodeId, side, newType) {
             if (!currentDiagram) return;
             const source = currentDiagram.nodes.find(n => n.id === sourceNodeId);
             if (!source) return;
@@ -4175,10 +4293,11 @@
             renderFlowchart(currentDiagram);
             updateConnections();
             hasUnsavedChanges = true;
-            document.getElementById('saveButton').classList.add('show');
+            const sb1 = document.getElementById('saveButton'); if (sb1) sb1.classList.add('show');
             // Autosave when adding a connected step (creates a connector)
             scheduleAutoSave();
-            saveDiagram(true);
+            // Force a silent save to ensure immediate persistence and await completion
+            await saveDiagram(true, true);
             updateDiagramInfoBox();
 
             // Open node editor for the new step so the user can name it/configure
@@ -4190,7 +4309,7 @@
 
         // Quick Add from ribbon: adds a new node near the center if diagram is empty,
         // or adds to the right of the last selected node (if any), else near top-left.
-        function quickAddNode() {
+        async function quickAddNode() {
             const typeSel = document.getElementById('insertNodeType');
             const t = typeSel ? (typeSel.value || 'process') : 'process';
             if (!currentDiagram) {
@@ -4208,10 +4327,10 @@
             renderFlowchart(currentDiagram);
             updateConnections();
             hasUnsavedChanges = true;
-            document.getElementById('saveButton').classList.add('show');
+            const sb2 = document.getElementById('saveButton'); if (sb2) sb2.classList.add('show');
             updateDiagramInfoBox();
-            // Immediate silent autosave for quick add
-            saveDiagram(true);
+            // Immediate silent autosave for quick add (force) and await completion
+            await saveDiagram(true, true);
             const el = document.querySelector(`[data-node-id="${id}"]`);
             if (el) openNodeEditor(node, el);
         }
@@ -4219,7 +4338,7 @@
         // Double-click canvas to add a node at clicked location (respect selected type)
         document.addEventListener('DOMContentLoaded', () => {
             const display = document.getElementById('flowchartDisplay');
-            display.addEventListener('dblclick', (e) => {
+            display.addEventListener('dblclick', async (e) => {
                 // Ignore if double-clicking an existing node or UI element
                 if (e.target.closest('.node') || e.target.closest('.ribbon') || e.target.closest('.modal')) return;
                 const typeSel = document.getElementById('insertNodeType');
@@ -4237,10 +4356,10 @@
                 renderFlowchart(currentDiagram);
                 updateConnections();
                 hasUnsavedChanges = true;
-                document.getElementById('saveButton').classList.add('show');
+                const sb3 = document.getElementById('saveButton'); if (sb3) sb3.classList.add('show');
                 scheduleAutoSave();
-                // Immediate silent autosave for canvas double-click add
-                saveDiagram(true);
+                // Immediate silent autosave for canvas double-click add (force) and await completion
+                await saveDiagram(true, true);
                 updateDiagramInfoBox();
                 const el = document.querySelector(`[data-node-id="${id}"]`);
                 if (el) openNodeEditor(node, el);
@@ -5229,7 +5348,8 @@
             return '';
         }
 
-        function setSelectedColor(color) {
+        function setSelectedColor(color, opts) {
+            const options = Object.assign({ applyToNode: true }, opts || {});
             const norm = normalizeHex(color);
             if (!norm) return;
             const hidden = document.getElementById('selectedColorValue');
@@ -5246,7 +5366,7 @@
             document.querySelectorAll(`#favoriteColors .color-option[data-color="${norm}"]`).forEach(el => el.classList.add('selected'));
 
             // If a node is currently being edited, apply the color immediately and autosave
-            if (editingNode && editingNodeElement) {
+            if (options.applyToNode && editingNode && editingNodeElement) {
                 editingNode.style = editingNode.style || {};
                 editingNode.style.fill = norm;
                 try { updateNodeVisual(editingNode, editingNodeElement); } catch (_) { }
