@@ -83,24 +83,13 @@ nodes:
     name: Finish
     type: end
     position:
-      x: 670
+      x: 669
       y: 100
     dimensions:
       width: 83
       height: 83
     style:
       fill: '#2ECC71'
-  - id: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758800296291
-    name: New Step
-    type: process
-    position:
-      x: 658
-      y: 253
-    dimensions:
-      width: 120
-      height: 60
-    style:
-      fill: '#3498db'
 edges:
   - id: connector_1758492243168-connector_1758492243168_step_1758498517717-1758498517718
     name: ""
@@ -108,7 +97,7 @@ edges:
     from: connector_1758492243168
     to: connector_1758492243168_step_1758498517717
     style:
-      stroke: '#a9adb1'
+      stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
   - id: process_1758491813602-process_1758497587395-1758501011747
@@ -117,7 +106,7 @@ edges:
     from: process_1758491813602
     to: process_1758497587395
     style:
-      stroke: '#a9adb1'
+      stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
   - id: process_1758497587395-process_1758497587395_step_1758503316733-1758503316734
@@ -126,7 +115,7 @@ edges:
     from: process_1758497587395
     to: process_1758497587395_step_1758503316733
     style:
-      stroke: '#a9adb1'
+      stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
   - id: process_1758497587395-process_1758497587395_step_1758503351699-1758503351699
@@ -135,7 +124,7 @@ edges:
     from: process_1758497587395
     to: process_1758497587395_step_1758503351699
     style:
-      stroke: '#a9adb1'
+      stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
   - id: process_1758497587395_step_1758503351699-process_1758497587395_step_1758503351699_step_1758503470042-1758503470043
@@ -144,7 +133,7 @@ edges:
     from: process_1758497587395_step_1758503351699
     to: process_1758497587395_step_1758503351699_step_1758503470042
     style:
-      stroke: '#a9adb1'
+      stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
   - id: process_1758497587395_step_1758503316733-connector_1758492243168-1758503545304
@@ -153,7 +142,7 @@ edges:
     from: process_1758497587395_step_1758503316733
     to: connector_1758492243168
     style:
-      stroke: '#a9adb1'
+      stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758503642984
@@ -162,7 +151,7 @@ edges:
     from: connector_1758492243168_step_1758498517717
     to: connector_1758492243168_step_1758498517717_step_1758503642983
     style:
-      stroke: '#a9adb1'
+      stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758720555134
@@ -171,7 +160,7 @@ edges:
     from: connector_1758492243168_step_1758498517717
     to: connector_1758492243168_step_1758498517717_step_1758503642983
     style:
-      stroke: '#a9adb1'
+      stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758772843863
@@ -180,16 +169,7 @@ edges:
     from: connector_1758492243168_step_1758498517717
     to: connector_1758492243168_step_1758498517717_step_1758503642983
     style:
-      stroke: '#a9adb1'
-      strokeWidth: 1
-      strokeDasharray: 6,2
-  - id: connector_1758492243168_step_1758498517717_step_1758503642983-connector_1758492243168_step_1758498517717_step_1758503642983_step_1758800296291-1758800296294
-    name: ""
-    type: ""
-    from: connector_1758492243168_step_1758498517717_step_1758503642983
-    to: connector_1758492243168_step_1758498517717_step_1758503642983_step_1758800296291
-    style:
-      stroke: '#a9adb1'
+      stroke: '#9c9ea0'
       strokeWidth: 1
       strokeDasharray: 6,2
 layout:
@@ -198,4 +178,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-25T06:38:48.35866-05:00
+updated: 2025-09-25T06:45:30.748199-05:00

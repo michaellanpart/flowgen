@@ -384,8 +384,12 @@
                         <input type="color" id="edgeStroke" value="#34495e" />
                     </div>
                     <div class="editor-group">
-                        <label for="edgeDash">Dash Pattern:</label>
-                        <input type="text" id="edgeDash" placeholder="e.g. 4,2 for dashed" />
+                        <label for="edgeDash">Line Style:</label>
+                        <select id="edgeDash">
+                            <option value="solid">Solid</option>
+                            <option value="dotted">Dotted</option>
+                            <option value="dashed">Dashed</option>
+                        </select>
                     </div>
                 </div>
                 <div style="font-size: 11px; color:#7f8c8d;">Tip: Double-click a connector to open this editor. Click a
@@ -474,8 +478,12 @@
                     </div>
                 </div>
                 <div class="editor-group">
-                    <label for="bulkEdgeDash">Dash Pattern:</label>
-                    <input type="text" id="bulkEdgeDash" placeholder="e.g. 4,2 for dashed (leave empty for solid)" />
+                    <label for="bulkEdgeDash">Line Style:</label>
+                    <select id="bulkEdgeDash">
+                        <option value="solid">Solid</option>
+                        <option value="dotted">Dotted</option>
+                        <option value="dashed">Dashed</option>
+                    </select>
                 </div>
                 <div style="font-size: 12px; color:#6b7280;">
                     This will overwrite stroke color, width, and dash pattern on all connectors in the diagram.
@@ -2005,7 +2013,7 @@
             const style = edge.style || {};
             document.getElementById('edgeStroke').value = style.stroke || '#34495e';
             document.getElementById('edgeWidth').value = style.strokeWidth || 2;
-            document.getElementById('edgeDash').value = style.strokeDasharray || '';
+            document.getElementById('edgeDash').value = dashArrayToName(style.strokeDasharray || '');
             // Auto-open panel if in auto mode and currently collapsed
             const panel = document.getElementById('infoPanel');
             if (panel && panel.classList.contains('collapsed')) {
@@ -2043,7 +2051,8 @@
                         e.style.strokeWidth = isNaN(w) ? 2 : w;
                     }
                     if (dashEl) {
-                        const dash = (dashEl.value || '').trim();
+                        const name = (dashEl.value || 'solid');
+                        const dash = dashNameToArray(name);
                         if (dash) e.style.strokeDasharray = dash; else delete e.style.strokeDasharray;
                     }
                     // Mark dirty, update visuals, and let autosave handle persistence
@@ -2107,8 +2116,8 @@
             edge.style.stroke = document.getElementById('edgeStroke').value || '#34495e';
             const w = parseFloat(document.getElementById('edgeWidth').value);
             edge.style.strokeWidth = isNaN(w) ? 2 : w;
-            const dash = (document.getElementById('edgeDash').value || '').trim();
-            edge.style.strokeDasharray = dash || undefined;
+            const dashName = (document.getElementById('edgeDash').value || 'solid');
+            edge.style.strokeDasharray = dashNameToArray(dashName) || undefined;
             hasUnsavedChanges = true;
             const sb = document.getElementById('saveButton'); if (sb) sb.classList.add('show');
             scheduleAutoSave();
@@ -2156,7 +2165,7 @@
             const s0 = (e0.style || {});
             const stroke = s0.stroke || '#34495e';
             const width = (typeof s0.strokeWidth === 'number' && s0.strokeWidth > 0) ? s0.strokeWidth : 2;
-            const dash = s0.strokeDasharray || '';
+            const dash = dashArrayToName(s0.strokeDasharray || '');
             const strokeEl = document.getElementById('bulkEdgeStroke');
             const widthEl = document.getElementById('bulkEdgeWidth');
             const dashEl = document.getElementById('bulkEdgeDash');
@@ -2184,7 +2193,8 @@
             const stroke = (strokeEl && strokeEl.value) ? strokeEl.value : '#34495e';
             const widthV = widthEl ? parseFloat(widthEl.value) : 2;
             const width = isNaN(widthV) ? 2 : Math.max(1, Math.min(20, widthV));
-            const dash = (dashEl && (dashEl.value || '').trim()) || '';
+            const dashName = (dashEl && dashEl.value) || 'solid';
+            const dash = dashNameToArray(dashName) || '';
 
             currentDiagram.edges.forEach(e => {
                 e.style = e.style || {};
@@ -4181,8 +4191,12 @@
                             <input type="color" id="defEdgeStroke" />
                             <span>Width</span>
                             <input type="number" id="defEdgeWidth" min="1" max="20" step="1" />
-                            <span>Dash</span>
-                            <input type="text" id="defEdgeDash" placeholder="e.g. 4,2" />
+                            <span>Line Style</span>
+                            <select id="defEdgeDash">
+                                <option value="solid">Solid</option>
+                                <option value="dotted">Dotted</option>
+                                <option value="dashed">Dashed</option>
+                            </select>
                         </div>
                     </div>
                     <div class="editor-group" style="margin-top:16px;display:flex;gap:8px;">
@@ -4202,7 +4216,7 @@
             document.getElementById('defNodeBorderWidth').value = n.borderWidth ?? 2;
             document.getElementById('defEdgeStroke').value = e.stroke || '#34495e';
             document.getElementById('defEdgeWidth').value = e.strokeWidth ?? 2;
-            document.getElementById('defEdgeDash').value = e.strokeDasharray || '';
+            document.getElementById('defEdgeDash').value = dashArrayToName(e.strokeDasharray || '');
 
             // Wire buttons
             document.getElementById('btnDefaultsReset').onclick = () => {
@@ -4224,7 +4238,7 @@
                     edge: {
                         stroke: document.getElementById('defEdgeStroke').value || '#34495e',
                         strokeWidth: clampInt(document.getElementById('defEdgeWidth').value, 1, 20, 2),
-                        strokeDasharray: (document.getElementById('defEdgeDash').value || '').trim()
+                        strokeDasharray: dashNameToArray(document.getElementById('defEdgeDash').value || 'solid')
                     }
                 };
                 appSettings.defaults = next;
@@ -5532,6 +5546,24 @@
                 'connector': '#1abc9c'
             };
             return colors[type] || '#95a5a6';
+        }
+
+        // Line style mapping helpers
+        function dashNameToArray(name) {
+            switch ((name || 'solid').toLowerCase()) {
+                case 'dotted': return '2,2';
+                case 'dashed': return '6,2';
+                case 'solid': default: return '';
+            }
+        }
+        function dashArrayToName(arr) {
+            const val = (arr || '').toString().trim();
+            if (!val) return 'solid';
+            const norm = val.replace(/\s+/g, '');
+            if (norm === '2,2') return 'dotted';
+            if (norm === '6,2') return 'dashed';
+            // Unknown/custom values fall back to dashed for now
+            return 'dashed';
         }
 
         // Choose readable text color against a given background
