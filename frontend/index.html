@@ -61,7 +61,10 @@
                     <div class="nav-sep"></div>
                     <div class="nav-menu-item" onclick="openOpenDiagramModal()">Open…</div>
                     <div class="nav-sep"></div>
-                    <div class="nav-menu-item" onclick="saveDiagram(false, true)">Save</div>
+                    <div class="nav-menu-item" onclick="saveDiagram(false, true)">
+                        Save
+                        <span style="float: right; color: #6b7280; font-size: 11px;">Ctrl+S</span>
+                    </div>
                     <div class="nav-menu-item" onclick="openSaveAsModal()">Save As…</div>
                     <div class="nav-sep"></div>
                     <div class="nav-menu-item" onclick="closeDiagram()">Close</div>
@@ -97,6 +100,11 @@
                     <div class="nav-menu-item"
                         onclick="(function(){ bulkOpenIntent = true; openBulkEdgeEditorModal(); })()">Format all
                         connectors…</div>
+                    <div class="nav-sep"></div>
+                    <div class="nav-menu-item" onclick="autoResizeCurrentNode()">
+                        Auto Size
+                        <span style="float: right; color: #6b7280; font-size: 11px;">Ctrl+Z</span>
+                    </div>
                     <div class="nav-sep"></div>
                     <div class="nav-menu-item" onclick="openDefaultsPanel(event)">Defaults</div>
 
