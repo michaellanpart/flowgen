@@ -67,15 +67,18 @@
                     <div class="nav-menu-item" onclick="closeDiagram()">Close</div>
                 </div>
             </div>
-            <a class="nav-link" id="navViewDiagram" onclick="switchView('diagram')">Diagram</a>
-            <a class="nav-link" id="navViewRender" onclick="switchView('render')">Render</a>
-            <a class="nav-link" id="navViewRaw" onclick="switchView('raw')">Raw Data</a>
+            <div class="nav-dropdown" id="navViewDd">
+                <button class="nav-btn" onclick="toggleNavDropdown(event, 'navViewDd')">View ▾</button>
+                <div class="nav-dropdown-menu">
+                    <div class="nav-menu-item" id="navViewDiagram" onclick="switchView('diagram')">Diagram</div>
+                    <div class="nav-menu-item" id="navViewRender" onclick="switchView('render')">Render</div>
+                    <div class="nav-menu-item" id="navViewRaw" onclick="switchView('raw')">Raw Data</div>
+                </div>
+            </div>
 
             <div class="nav-dropdown" id="navLayoutDd">
                 <button class="nav-btn" onclick="toggleNavDropdown(event, 'navLayoutDd')">Layout ▾</button>
                 <div class="nav-dropdown-menu">
-                    <div class="nav-menu-item" onclick="alignDiagram()">Align Diagram</div>
-                    <div class="nav-sep"></div>
                     <div class="nav-menu-item" style="cursor:default;">
                         <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:6px;">Connector
                             Routing</label>
@@ -94,11 +97,10 @@
                     <div class="nav-menu-item"
                         onclick="(function(){ bulkOpenIntent = true; openBulkEdgeEditorModal(); })()">Format all
                         connectors…</div>
+                    <div class="nav-sep"></div>
+                    <div class="nav-menu-item" onclick="openDefaultsPanel(event)">Defaults</div>
 
                 </div>
-            </div>
-            <div class="nav-dropdown" id="navDefaultsDd">
-                <button class="nav-btn" onclick="openDefaultsPanel(event)">Defaults</button>
             </div>
         </div>
         <div class="nav-spacer"></div>
@@ -130,6 +132,7 @@
                     </div>
                 </div>
                 <aside id="infoPanel" class="card flex-shrink-0" aria-live="polite" style="width:360px;">
+                    <div id="infoPanelHeader" class="card-header d-none"></div>
                     <div id="infoPanelBody" class="card-body"></div>
                     <div id="infoPanelFooter" class="card-footer d-none"></div>
                 </aside>
@@ -166,6 +169,12 @@
                             <option value="end">🔴 End (Circle)</option>
                             <option value="decision">💎 Decision (Diamond)</option>
                             <option value="data">📊 Data (Hexagon)</option>
+                            <option value="io">📥 Input/Output (Parallelogram)</option>
+                            <option value="manualInput">⌨️ Manual Input (Trapezoid)</option>
+                            <option value="subroutine">🧩 Subroutine (Double-Sided)</option>
+                            <option value="database">🛢️ Database (Cylinder)</option>
+                            <option value="delay">⏱️ Delay (D-shape)</option>
+                            <option value="offPage">📄 Off Page</option>
                             <option value="connector">🔗 Connector (Circle)</option>
                         </select>
                     </div>
@@ -1556,24 +1565,24 @@
             const body = document.getElementById('infoPanelBody');
             if (body) body.innerHTML = html;
         }
-        function setInfoPanelHeader(title, subtitle = '') {
-            // Header removed for flat card design; keep elements empty if present
-            const t = document.getElementById('infoTitle');
-            const s = document.getElementById('infoSubtitle');
-            if (t) t.textContent = '';
-            if (s) s.textContent = '';
+        function setInfoPanelHeader(title) {
+            const header = document.getElementById('infoPanelHeader');
+            if (!header) return;
+            const hasTitle = !!(title && String(title).trim());
+            header.textContent = hasTitle ? String(title) : '';
+            header.classList.toggle('d-none', !hasTitle);
         }
         // Dock the Defaults UI into the right panel and slide it open
         function dockDefaultsPanel() {
             // Undock any existing editors
-            try { undockNodeEditor(); } catch (_) { }
-            try { undockEdgeEditor(); } catch (_) { }
+            try { closeNodeEditor(); } catch (_) { try { undockNodeEditor(); } catch (_) { } }
+            try { closeEdgeEditor(); } catch (_) { try { undockEdgeEditor(); } catch (_) { } }
             const panelBody = document.getElementById('infoPanelBody');
             if (!panelBody) return;
             // Render defaults content into the body and mark as docked/open
             renderDefaultsPanel(true /*docked*/);
             editorDocked = true;
-            setInfoPanelHeader('', '');
+            setInfoPanelHeader('Edit Defaults');
             applyInfoPanelState();
         }
         function undockDefaultsPanel() {
@@ -1583,6 +1592,7 @@
             editorDocked = false;
             applyInfoPanelState();
             renderDiagramSummaryInPanel();
+            setInfoPanelHeader('');
         }
         function renderDiagramSummaryInPanel() {
             const d = window.currentDiagram;
@@ -1592,11 +1602,11 @@
             const nodes = Array.isArray(d.nodes) ? d.nodes.length : 0;
             const edges = Array.isArray(d.edges) ? d.edges.length : 0;
             const layout = (d.layout && d.layout.direction) ? d.layout.direction : 'top-bottom';
-            setInfoPanelHeader('', '');
+            setInfoPanelHeader('');
             setInfoPanelBody('');
         }
         function clearInfoPanelBody() {
-            setInfoPanelHeader('', ''); setInfoPanelBody('');
+            setInfoPanelHeader(''); setInfoPanelBody('');
         }
         function dockNodeEditor() {
             // If edge editor is currently docked, undock it first
@@ -1616,8 +1626,8 @@
                 footerHost.classList.remove('d-none');
             }
             editorDocked = true;
-            // Editing: keep header concise and do not show long name/id in subtitle
-            setInfoPanelHeader('', '');
+            // Header should reflect node editing
+            setInfoPanelHeader('Edit Node');
             applyInfoPanelState();
             // Add a small editing badge to the title for visibility
             try {
@@ -1636,6 +1646,8 @@
             const editor = document.getElementById('nodeEditor');
             if (!editor) return;
             editor.classList.remove('docked');
+            // Ensure editor is hidden when undocked to avoid centered modal appearance
+            editor.style.display = 'none';
             editorDocked = false;
             applyInfoPanelState();
             // Nothing to cleanup for Bootstrap Accordion
@@ -1645,9 +1657,15 @@
             // Clear panel footer content and hide it
             const footerHost = document.getElementById('infoPanelFooter');
             if (footerHost) {
+                // If the footer currently holds the node editor buttons, move them back into the editor
+                const nodeBtns = footerHost.querySelector('.editor-buttons');
+                if (nodeBtns) {
+                    editor.appendChild(nodeBtns);
+                }
                 footerHost.replaceChildren();
                 footerHost.classList.add('d-none');
             }
+            setInfoPanelHeader('');
         }
 
         // Edge editor docking into Info Panel
@@ -1668,8 +1686,8 @@
                 footerHost.classList.remove('d-none');
             }
             editorDocked = true;
-            // Header: concise during editing; no long connector summary
-            setInfoPanelHeader('Info', '');
+            // Header should reflect connector editing
+            setInfoPanelHeader('Edit Connector');
             applyInfoPanelState();
             // Add Editing badge
             try {
@@ -1687,6 +1705,8 @@
             const editor = document.getElementById('edgeEditor');
             if (!editor) return;
             editor.classList.remove('docked');
+            // Ensure editor is hidden when undocked to avoid centered modal appearance
+            editor.style.display = 'none';
             editorDocked = false;
             applyInfoPanelState();
             const appRoot = document.querySelector('#infoPanel')?.parentElement || document.body;
@@ -1694,9 +1714,15 @@
             // Clear panel footer content and hide it
             const footerHost = document.getElementById('infoPanelFooter');
             if (footerHost) {
+                // If the footer currently holds the edge editor buttons, move them back into the editor
+                const edgeBtns = footerHost.querySelector('.editor-buttons');
+                if (edgeBtns) {
+                    editor.appendChild(edgeBtns);
+                }
                 footerHost.replaceChildren();
                 footerHost.classList.add('d-none');
             }
+            setInfoPanelHeader('');
         }
 
         // Accordion removed; no persistence or related helpers required.
@@ -1845,6 +1871,7 @@
                 titleEl?.querySelector('[data-role="editing-badge"]')?.remove();
             } catch (_) { }
             // Keep panel open (always-locked)
+            setInfoPanelHeader('');
         }
 
         async function saveEdgeChanges() {
@@ -2542,6 +2569,7 @@
                 delete panel.dataset.autoOpened;
                 applyInfoPanelState();
             }
+            setInfoPanelHeader('');
         }
 
         async function confirmDeleteCurrentNode() {
@@ -2694,10 +2722,9 @@
             nodeElement.style.borderRadius = '';
             nodeElement.style.clipPath = '';
             textEl.style.transform = '';
-            // Reset border and remove any prior hex overlay
+            // Reset border and remove any prior overlays
             nodeElement.style.border = '';
-            const prevOverlay = nodeElement.querySelector('.shape-border-overlay');
-            if (prevOverlay) prevOverlay.remove();
+            nodeElement.querySelectorAll('.shape-border-overlay').forEach(el => el.remove());
 
             if (node.type === 'decision') {
                 // Diamond shape for decisions - ensure square dimensions
@@ -2740,6 +2767,86 @@
                     });
                     nodeElement.appendChild(overlay);
                 }
+            } else if (node.type === 'io') {
+                // Parallelogram (I/O)
+                nodeElement.style.clipPath = 'polygon(15% 0%, 100% 0%, 85% 100%, 0% 100%)';
+                if (node.rotation) nodeElement.style.transform = `rotate(${node.rotation}deg)`;
+                if (strokeWidth > 0) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'shape-border-overlay';
+                    Object.assign(overlay.style, {
+                        position: 'absolute', inset: '0', pointerEvents: 'none',
+                        clipPath: 'polygon(15% 0%, 100% 0%, 85% 100%, 0% 100%)',
+                        boxShadow: `inset 0 0 0 ${strokeWidth}px ${borderColor}`
+                    });
+                    nodeElement.appendChild(overlay);
+                }
+            } else if (node.type === 'manualInput') {
+                // Trapezoid (Manual Input)
+                nodeElement.style.clipPath = 'polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%)';
+                if (node.rotation) nodeElement.style.transform = `rotate(${node.rotation}deg)`;
+                if (strokeWidth > 0) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'shape-border-overlay';
+                    Object.assign(overlay.style, {
+                        position: 'absolute', inset: '0', pointerEvents: 'none',
+                        clipPath: 'polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%)',
+                        boxShadow: `inset 0 0 0 ${strokeWidth}px ${borderColor}`
+                    });
+                    nodeElement.appendChild(overlay);
+                }
+            } else if (node.type === 'subroutine') {
+                // Rectangle with two vertical inner lines
+                nodeElement.style.borderRadius = '8px';
+                if (node.rotation) nodeElement.style.transform = `rotate(${node.rotation}deg)`;
+                // Add inner stripes as overlay children
+                const leftStripe = document.createElement('div');
+                leftStripe.className = 'shape-border-overlay subroutine-stripe-left';
+                Object.assign(leftStripe.style, {
+                    position: 'absolute', top: '4px', bottom: '4px', left: '8px', width: '2px',
+                    background: borderColor, pointerEvents: 'none'
+                });
+                const rightStripe = document.createElement('div');
+                rightStripe.className = 'shape-border-overlay subroutine-stripe-right';
+                Object.assign(rightStripe.style, {
+                    position: 'absolute', top: '4px', bottom: '4px', right: '8px', width: '2px',
+                    background: borderColor, pointerEvents: 'none'
+                });
+                nodeElement.appendChild(leftStripe);
+                nodeElement.appendChild(rightStripe);
+            } else if (node.type === 'database') {
+                // Cylindrical database approximation
+                nodeElement.style.borderRadius = '10px/20px';
+                if (node.rotation) nodeElement.style.transform = `rotate(${node.rotation}deg)`;
+                // Top ellipse overlay
+                if (strokeWidth > 0) {
+                    const topEllipse = document.createElement('div');
+                    topEllipse.className = 'shape-border-overlay';
+                    Object.assign(topEllipse.style, {
+                        position: 'absolute', left: '4px', right: '4px', top: '-2px', height: '12px',
+                        border: `${Math.max(1, strokeWidth)}px solid ${borderColor}`, borderBottom: 'none',
+                        borderRadius: '999px/12px', pointerEvents: 'none', background: 'transparent'
+                    });
+                    nodeElement.appendChild(topEllipse);
+                }
+            } else if (node.type === 'delay') {
+                // D-shape: rectangle with fully rounded right side
+                nodeElement.style.borderRadius = '0 999px 999px 0';
+                if (node.rotation) nodeElement.style.transform = `rotate(${node.rotation}deg)`;
+            } else if (node.type === 'offPage') {
+                // Off-Page Connector: notched shape
+                nodeElement.style.clipPath = 'polygon(0 0,100% 0,100% 70%,60% 70%,60% 100%,0 100%)';
+                if (node.rotation) nodeElement.style.transform = `rotate(${node.rotation}deg)`;
+                if (strokeWidth > 0) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'shape-border-overlay';
+                    Object.assign(overlay.style, {
+                        position: 'absolute', inset: '0', pointerEvents: 'none',
+                        clipPath: 'polygon(0 0,100% 0,100% 70%,60% 70%,60% 100%,0 100%)',
+                        boxShadow: `inset 0 0 0 ${strokeWidth}px ${borderColor}`
+                    });
+                    nodeElement.appendChild(overlay);
+                }
             } else {
                 // Rectangle for process nodes
                 nodeElement.style.borderRadius = '8px';
@@ -2749,7 +2856,7 @@
             }
 
             // Apply standard border to non-hexagon shapes
-            if (node.type !== 'data') {
+            if (node.type !== 'data' && node.type !== 'io' && node.type !== 'manualInput' && node.type !== 'offPage') {
                 if (strokeWidth > 0) {
                     nodeElement.style.border = `${strokeWidth}px solid ${borderColor}`;
                 } else {
@@ -2856,6 +2963,35 @@
                 const inset = 6; // small visual margin
                 width = Math.max(80, Math.ceil(textBoxW + totalPad + inset));
                 height = Math.max(40, Math.ceil(textBoxH + totalPad + inset));
+            } else if (t === 'io') {
+                // Parallelogram: add small insets to avoid clipping text near slants
+                const inset = 6;
+                width = Math.max(90, Math.ceil(textBoxW + totalPad + inset));
+                height = Math.max(40, Math.ceil(textBoxH + totalPad + inset));
+            } else if (t === 'manualInput') {
+                // Trapezoid: similar to parallelogram
+                const inset = 6;
+                width = Math.max(90, Math.ceil(textBoxW + totalPad + inset));
+                height = Math.max(40, Math.ceil(textBoxH + totalPad + inset));
+            } else if (t === 'subroutine') {
+                // Subroutine: rectangle with inner stripes; treat like process with a touch more width
+                const extra = 10; // for visual breathing room around stripes
+                width = Math.max(100, Math.ceil(textBoxW + totalPad + extra));
+                height = Math.max(40, Math.ceil(textBoxH + totalPad));
+            } else if (t === 'database') {
+                // Cylinder: a bit taller for ellipse
+                const inset = 8;
+                width = Math.max(100, Math.ceil(textBoxW + totalPad + inset));
+                height = Math.max(50, Math.ceil(textBoxH + totalPad + inset));
+            } else if (t === 'delay') {
+                // D-shape: similar to process
+                width = Math.max(90, Math.ceil(textBoxW + totalPad));
+                height = Math.max(40, Math.ceil(textBoxH + totalPad));
+            } else if (t === 'offPage') {
+                // Notched: allow small inset
+                const inset = 6;
+                width = Math.max(90, Math.ceil(textBoxW + totalPad + inset));
+                height = Math.max(40, Math.ceil(textBoxH + totalPad + inset));
             } else {
                 // Rectangles: tight fit to text box + paddings
                 width = Math.max(80, Math.ceil(textBoxW + totalPad));
@@ -2901,6 +3037,54 @@
                     { side: 'right', x: '94%', y: '50%', transform: 'translate(-50%, -50%)' },
                     { side: 'bottom', x: '50%', y: '94%', transform: 'translate(-50%, -50%)' },
                     { side: 'left', x: '6%', y: '50%', transform: 'translate(-50%, -50%)' }
+                ];
+            } else if (node.type === 'io') {
+                // Parallelogram: midpoints shifted slightly to account for slants
+                connectionPoints = [
+                    { side: 'top', x: '52%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                    { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                    { side: 'bottom', x: '48%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                    { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                ];
+            } else if (node.type === 'manualInput') {
+                // Trapezoid: use standard side midpoints
+                connectionPoints = [
+                    { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                    { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                    { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                    { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                ];
+            } else if (node.type === 'subroutine') {
+                // Same as rectangle
+                connectionPoints = [
+                    { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                    { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                    { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                    { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                ];
+            } else if (node.type === 'database') {
+                // Treat like rectangle
+                connectionPoints = [
+                    { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                    { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                    { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                    { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                ];
+            } else if (node.type === 'delay') {
+                // D-shape: standard midpoints
+                connectionPoints = [
+                    { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                    { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                    { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                    { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                ];
+            } else if (node.type === 'offPage') {
+                // Use rectangle midpoints
+                connectionPoints = [
+                    { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                    { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                    { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                    { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
                 ];
             } else {
                 connectionPoints = [
@@ -3434,6 +3618,35 @@
                             <div style="width:24px;height:18px;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0 50%);border:2px solid #374151;"></div>
                             <div class="shape-label">data</div>
                         </div>
+                        <div class="shape-option" data-shape="io" title="Input/Output">
+                            <div style="width:26px;height:16px;clip-path:polygon(15% 0%,100% 0%,85% 100%,0% 100%);border:2px solid #374151;"></div>
+                            <div class="shape-label">I/O</div>
+                        </div>
+                        <div class="shape-option" data-shape="manualInput" title="Manual Input">
+                            <div style="width:26px;height:16px;clip-path:polygon(10% 0%,90% 0%,100% 100%,0% 100%);border:2px solid #374151;"></div>
+                            <div class="shape-label">manual</div>
+                        </div>
+                        <div class="shape-option" data-shape="subroutine" title="Subroutine">
+                            <div style="width:24px;height:16px;border:2px solid #374151;border-radius:4px;position:relative;">
+                                <div style="position:absolute;top:2px;bottom:2px;left:4px;width:2px;background:#374151;"></div>
+                                <div style="position:absolute;top:2px;bottom:2px;right:4px;width:2px;background:#374151;"></div>
+                            </div>
+                            <div class="shape-label">sub</div>
+                        </div>
+                        <div class="shape-option" data-shape="database" title="Database">
+                            <div style="width:24px;height:16px;border:2px solid #374151;border-radius:6px/12px 12px 6px 6px;position:relative;overflow:hidden;">
+                                <div style="position:absolute;top:-2px;left:0;right:0;height:6px;border:2px solid #374151;border-bottom:none;border-radius:12px/6px;"></div>
+                            </div>
+                            <div class="shape-label">db</div>
+                        </div>
+                        <div class="shape-option" data-shape="delay" title="Delay">
+                            <div style="width:24px;height:16px;border:2px solid #374151;border-radius:0 999px 999px 0;"></div>
+                            <div class="shape-label">delay</div>
+                        </div>
+                        <div class="shape-option" data-shape="offPage" title="Off Page">
+                            <div style="width:24px;height:18px;clip-path:polygon(0 0,100% 0,100% 70%,60% 70%,60% 100%,0 100%);border:2px solid #374151;"></div>
+                            <div class="shape-label">off</div>
+                        </div>
                     </div>`;
                     nodeEl.appendChild(toolbar);
 
@@ -3524,6 +3737,51 @@
                         { side: 'right', x: '94%', y: '50%', transform: 'translate(-50%, -50%)' },
                         { side: 'bottom', x: '50%', y: '94%', transform: 'translate(-50%, -50%)' },
                         { side: 'left', x: '6%', y: '50%', transform: 'translate(-50%, -50%)' }
+                    ];
+                } else if (node.type === 'io') {
+                    // Parallelogram: nudge top/bottom a bit for better orthogonal entry
+                    connectionPoints = [
+                        { side: 'top', x: '52%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                        { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                        { side: 'bottom', x: '48%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                        { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                    ];
+                } else if (node.type === 'manualInput') {
+                    // Trapezoid: standard side midpoints
+                    connectionPoints = [
+                        { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                        { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                        { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                        { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                    ];
+                } else if (node.type === 'subroutine') {
+                    // Rectangle: standard midpoints
+                    connectionPoints = [
+                        { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                        { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                        { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                        { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                    ];
+                } else if (node.type === 'database') {
+                    connectionPoints = [
+                        { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                        { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                        { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                        { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                    ];
+                } else if (node.type === 'delay') {
+                    connectionPoints = [
+                        { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                        { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                        { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                        { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
+                    ];
+                } else if (node.type === 'offPage') {
+                    connectionPoints = [
+                        { side: 'top', x: '50%', y: '0%', transform: `translate(-50%, -50%) translateY(-${bump}px)` },
+                        { side: 'right', x: '100%', y: '50%', transform: `translate(-50%, -50%) translateX(${bump}px)` },
+                        { side: 'bottom', x: '50%', y: '100%', transform: `translate(-50%, -50%) translateY(${bump}px)` },
+                        { side: 'left', x: '0%', y: '50%', transform: `translate(-50%, -50%) translateX(-${bump}px)` }
                     ];
                 } else {
                     // Rectangular shapes - connection points at middle of each side
@@ -3618,8 +3876,7 @@
                 }
                 // Reset any previous borders/overlays
                 nodeEl.style.border = '';
-                const existingOverlay = nodeEl.querySelector('.shape-border-overlay');
-                if (existingOverlay) existingOverlay.remove();
+                nodeEl.querySelectorAll('.shape-border-overlay').forEach(el => el.remove());
 
                 // Add special styling for different node types
                 if (node.type === 'decision') {
@@ -3651,6 +3908,51 @@
                         });
                         nodeEl.appendChild(overlay);
                     }
+                } else if (node.type === 'io') {
+                    nodeEl.style.clipPath = 'polygon(15% 0%, 100% 0%, 85% 100%, 0% 100%)';
+                    if (node.rotation) nodeEl.style.transform = `rotate(${node.rotation}deg)`;
+                    if (borderWidth > 0) {
+                        const overlay = document.createElement('div');
+                        overlay.className = 'shape-border-overlay';
+                        Object.assign(overlay.style, {
+                            position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
+                            pointerEvents: 'none',
+                            clipPath: 'polygon(15% 0%, 100% 0%, 85% 100%, 0% 100%)',
+                            boxShadow: `inset 0 0 0 ${borderWidth}px ${borderColor}`
+                        });
+                        nodeEl.appendChild(overlay);
+                    }
+                } else if (node.type === 'manualInput') {
+                    nodeEl.style.clipPath = 'polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%)';
+                    if (node.rotation) nodeEl.style.transform = `rotate(${node.rotation}deg)`;
+                    if (borderWidth > 0) {
+                        const overlay = document.createElement('div');
+                        overlay.className = 'shape-border-overlay';
+                        Object.assign(overlay.style, {
+                            position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
+                            pointerEvents: 'none',
+                            clipPath: 'polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%)',
+                            boxShadow: `inset 0 0 0 ${borderWidth}px ${borderColor}`
+                        });
+                        nodeEl.appendChild(overlay);
+                    }
+                } else if (node.type === 'subroutine') {
+                    if (node.rotation) nodeEl.style.transform = `rotate(${node.rotation}deg)`;
+                    // Add inner stripes
+                    const leftStripe = document.createElement('div');
+                    leftStripe.className = 'shape-border-overlay subroutine-stripe-left';
+                    Object.assign(leftStripe.style, {
+                        position: 'absolute', top: '4px', bottom: '4px', left: '8px', width: '2px',
+                        background: borderColor, pointerEvents: 'none'
+                    });
+                    const rightStripe = document.createElement('div');
+                    rightStripe.className = 'shape-border-overlay subroutine-stripe-right';
+                    Object.assign(rightStripe.style, {
+                        position: 'absolute', top: '4px', bottom: '4px', right: '8px', width: '2px',
+                        background: borderColor, pointerEvents: 'none'
+                    });
+                    nodeEl.appendChild(leftStripe);
+                    nodeEl.appendChild(rightStripe);
                 } else {
                     // Rectangle/process
                     if (node.rotation) {
@@ -3658,8 +3960,8 @@
                     }
                 }
 
-                // Apply border to non-hexagon shapes
-                if (node.type !== 'data') {
+                // Apply border to shapes that don't use overlay borders
+                if (node.type !== 'data' && node.type !== 'io' && node.type !== 'manualInput') {
                     if (borderWidth > 0) {
                         nodeEl.style.border = `${borderWidth}px solid ${borderColor}`;
                     } else {
@@ -4324,6 +4626,8 @@
             const panel = document.getElementById('infoPanel');
             if (panel) panel.classList.add('temp-open');
             applyInfoPanelState();
+            // Set initial View highlight to Diagram (edit mode)
+            try { updateViewButtons('diagram'); } catch (_) { }
         });
 
         // Removed the Add Step (+) overlay in favor of double-clicking connection points
@@ -5437,6 +5741,12 @@
                 'process': '#3498db',
                 'decision': '#f39c12',
                 'data': '#9b59b6',
+                'io': '#1abc9c',
+                'manualInput': '#16a085',
+                'subroutine': '#8e44ad',
+                'database': '#2c3e50',
+                'delay': '#d35400',
+                'offPage': '#95a5a6',
                 'connector': '#1abc9c'
             };
             return colors[type] || '#95a5a6';

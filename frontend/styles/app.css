@@ -26,6 +26,7 @@ body { padding-top: 56px; background: #f3f4f6; font-family: -apple-system, Blink
 .nav-dropdown.open > .nav-dropdown-menu { display: block; }
 .nav-menu-item { padding: 6px 8px; border-radius: 6px; cursor: pointer; color: #111827; }
 .nav-menu-item:hover { background: #f3f4f6; }
+.nav-menu-item.active { background: #ecfeff; border: 1px solid #99f6e4; }
 .nav-sep { height: 1px; width: 100%; background: #e5e7eb; margin: 6px 0; }
 
 /* Layout */
@@ -53,7 +54,9 @@ body { padding-top: 56px; background: #f3f4f6; font-family: -apple-system, Blink
 .info-section code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
 
 /* Zoom overlay */
-.zoom-overlay { position: absolute; top: 10px; right: 12px; z-index: 10; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.9); border: 1px solid #d1d5db; border-radius: .375rem; padding: 6px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.zoom-overlay { position: absolute; bottom: 10px; right: 12px; top: auto; z-index: 10; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.9); border: 1px solid #d1d5db; border-radius: .25rem; padding: 4px 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.zoom-overlay .btn { padding: 2px 6px; font-size: 12px; line-height: 1; }
+.zoom-overlay .zoom-level { font-size: 11px; }
 
 
 /* Nodes & connection points */
@@ -195,6 +198,19 @@ rect.connection-label-bg.selected { stroke: #2563eb !important; stroke-width: 1.
 .compact-row { display: flex; gap: 12px; }
 .compact-row .editor-group { flex: 1 1 0; margin-bottom: 12px; }
 .editor-buttons { display: flex; gap: 12px; justify-content: end; margin-top: 20px; }
+/* Card footer layout for editor action buttons */
+#infoPanelFooter { display: block; }
+#infoPanelFooter .editor-buttons { 
+	display: flex; 
+	justify-content: flex-end; 
+	align-items: center; 
+	gap: 8px; 
+	width: 100%; 
+	margin: 0; 
+	padding: 0; 
+	border: 0; 
+	background: transparent; 
+}
 
 /* Docked editor inside the right card */
 .node-editor.docked { padding: 0; margin: 0; background: transparent; border: 0; border-radius: 0; }
