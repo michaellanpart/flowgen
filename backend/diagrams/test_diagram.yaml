@@ -92,11 +92,11 @@ nodes:
     name: Finish
     type: end
     position:
-      x: 714
-      y: 100
+      x: 704
+      y: 106
     dimensions:
-      width: 92
-      height: 92
+      width: 83
+      height: 83
     style:
       fill: '#2ECC71'
       strokeWidth: 2
@@ -107,8 +107,8 @@ nodes:
       x: 475
       y: 410
     dimensions:
-      width: 257
-      height: 85
+      width: 115
+      height: 60
     style:
       fill: '#d5d6d7'
       stroke: '#515152'
@@ -117,8 +117,8 @@ nodes:
     name: New Step
     type: process
     position:
-      x: 720
-      y: 293
+      x: 697
+      y: 255
     dimensions:
       width: 105
       height: 60
@@ -249,4 +249,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-26T08:07:20.606123-05:00
+updated: 2025-09-26T08:21:29.578989-05:00

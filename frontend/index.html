@@ -105,6 +105,10 @@
                         Auto Size
                         <span style="float: right; color: #6b7280; font-size: 11px;">Ctrl+Z</span>
                     </div>
+                    <div class="nav-menu-item" onclick="alignSelectedNode()">
+                        Align
+                        <span style="float: right; color: #6b7280; font-size: 11px;">Ctrl+L</span>
+                    </div>
                     <div class="nav-sep"></div>
                     <div class="nav-menu-item" onclick="openDefaultsPanel(event)">Defaults</div>
 
@@ -3261,6 +3265,10 @@
                 } else {
                     showMessage('Select a node first to auto-resize', 'info');
                 }
+            } else if (cmd && (e.key === 'l' || e.key === 'L')) {
+                e.preventDefault();
+                // Align selected node with connected nodes
+                alignSelectedNode();
             }
         });
 
@@ -3353,6 +3361,149 @@
             saveDiagram(true);
 
             showMessage('Node auto-resized to fit text!', 'success');
+        }
+
+        function alignSelectedNode() {
+            if (!selectedNodeElement) {
+                showMessage('Select a node first to align', 'info');
+                return;
+            }
+
+            if (!currentDiagram || !currentDiagram.edges) {
+                showMessage('No connections found to align with', 'info');
+                return;
+            }
+
+            const selectedNodeId = selectedNodeElement.dataset.nodeId;
+            if (!selectedNodeId) {
+                showMessage('Selected node ID not found', 'error');
+                return;
+            }
+
+            // Find all connected nodes (both incoming and outgoing connections)
+            const connectedNodeIds = [];
+            currentDiagram.edges.forEach(edge => {
+                if (edge.from === selectedNodeId && edge.to !== selectedNodeId) {
+                    connectedNodeIds.push(edge.to);
+                } else if (edge.to === selectedNodeId && edge.from !== selectedNodeId) {
+                    connectedNodeIds.push(edge.from);
+                }
+            });
+
+            if (connectedNodeIds.length === 0) {
+                showMessage('No connected nodes found to align with', 'info');
+                return;
+            }
+
+            // Get positions of connected nodes
+            const connectedPositions = [];
+            connectedNodeIds.forEach(nodeId => {
+                const nodeEl = document.querySelector(`[data-node-id="${nodeId}"]`);
+                if (nodeEl) {
+                    const x = parseInt(nodeEl.style.left) || 0;
+                    const y = parseInt(nodeEl.style.top) || 0;
+                    const width = parseInt(nodeEl.style.width) || 120;
+                    const height = parseInt(nodeEl.style.height) || 60;
+
+                    connectedPositions.push({
+                        centerX: x + width / 2,
+                        centerY: y + height / 2,
+                        width: width,
+                        height: height,
+                        nodeEl: nodeEl
+                    });
+                }
+            }); if (connectedPositions.length === 0) {
+                showMessage('Could not find positions of connected nodes', 'error');
+                return;
+            }
+
+            // Get current selected node position
+            const currentX = parseInt(selectedNodeElement.style.left) || 0;
+            const currentY = parseInt(selectedNodeElement.style.top) || 0;
+            const selectedWidth = parseInt(selectedNodeElement.style.width) || 120;
+            const selectedHeight = parseInt(selectedNodeElement.style.height) || 60;
+            const currentCenterX = currentX + selectedWidth / 2;
+            const currentCenterY = currentY + selectedHeight / 2;
+
+            // Determine alignment direction based on relative positions
+            let newX = currentX;
+            let newY = currentY;
+
+            if (connectedPositions.length === 1) {
+                // Single connection: align either horizontally or vertically with mandatory spacing
+                const connected = connectedPositions[0];
+                const connectedCenterX = connected.centerX;
+                const connectedCenterY = connected.centerY;
+
+                // Determine if we should align horizontally or vertically
+                const deltaX = Math.abs(currentCenterX - connectedCenterX);
+                const deltaY = Math.abs(currentCenterY - connectedCenterY);
+
+                // Calculate mandatory separation distance
+                const minSeparationX = (selectedWidth / 2) + (connected.width / 2) + 40; // 40px padding
+                const minSeparationY = (selectedHeight / 2) + (connected.height / 2) + 40; // 40px padding
+
+                if (deltaX > deltaY) {
+                    // Align vertically (same Y coordinate) but ALWAYS maintain horizontal separation
+                    newY = connectedCenterY - selectedHeight / 2;
+                    
+                    // ALWAYS maintain minimum horizontal separation
+                    if (currentCenterX < connectedCenterX) {
+                        newX = connectedCenterX - minSeparationX - selectedWidth / 2;
+                    } else {
+                        newX = connectedCenterX + minSeparationX - selectedWidth / 2;
+                    }
+                } else {
+                    // Align horizontally (same X coordinate) but ALWAYS maintain vertical separation
+                    newX = connectedCenterX - selectedWidth / 2;
+                    
+                    // ALWAYS maintain minimum vertical separation  
+                    if (currentCenterY < connectedCenterY) {
+                        newY = connectedCenterY - minSeparationY - selectedHeight / 2;
+                    } else {
+                        newY = connectedCenterY + minSeparationY - selectedHeight / 2;
+                    }
+                }
+            } else {
+                // Multiple connections: align to average X or Y coordinate
+                const avgCenterX = connectedPositions.reduce((sum, pos) => sum + pos.centerX, 0) / connectedPositions.length;
+                const avgCenterY = connectedPositions.reduce((sum, pos) => sum + pos.centerY, 0) / connectedPositions.length;
+
+                // Choose alignment based on which would move the node less
+                const deltaX = Math.abs(currentCenterX - avgCenterX);
+                const deltaY = Math.abs(currentCenterY - avgCenterY);
+
+                if (deltaX < deltaY) {
+                    // Align vertically (same Y as average)
+                    newY = avgCenterY - selectedHeight / 2;
+                } else {
+                    // Align horizontally (same X as average)
+                    newX = avgCenterX - selectedWidth / 2;
+                }
+            }            // Update the selected node's position
+            selectedNodeElement.style.left = newX + 'px';
+            selectedNodeElement.style.top = newY + 'px';
+
+            // Update the data model
+            const selectedNode = currentDiagram.nodes.find(n => n.id === selectedNodeId);
+            if (selectedNode) {
+                selectedNode.position = selectedNode.position || {};
+                selectedNode.position.x = newX + 50; // Add padding offset like other position updates
+                selectedNode.position.y = newY + 50;
+            }
+
+            // Mark as changed and refresh connections
+            hasUnsavedChanges = true;
+            document.getElementById('saveButton').classList.add('show');
+            scheduleAutoSave();
+            updateConnections();
+
+            // Immediate silent autosave
+            saveDiagram(true);
+
+            const connectionText = connectedPositions.length === 1 ? '1 connection' : `${connectedPositions.length} connections`;
+            showMessage(`Node aligned with ${connectionText}!`, 'success');
         }
 
         function renderFlowchart(diagram) {
