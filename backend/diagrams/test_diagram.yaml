@@ -7,7 +7,7 @@ nodes:
     type: start
     position:
       x: 100
-      y: 100
+      y: 102
     dimensions:
       width: 79
       height: 79
@@ -18,8 +18,8 @@ nodes:
     name: Step 2
     type: process
     position:
-      x: 479
-      y: 254
+      x: 481
+      y: 256
     dimensions:
       width: 86
       height: 60
@@ -30,8 +30,8 @@ nodes:
     name: Passed Validation
     type: process
     position:
-      x: 255
-      y: 111
+      x: 257
+      y: 113
     dimensions:
       width: 155
       height: 58
@@ -55,11 +55,11 @@ nodes:
     name: "Yes"
     type: decision
     position:
-      x: 348
-      y: 248
+      x: 339
+      y: 247
     dimensions:
-      width: 72
-      height: 72
+      width: 67
+      height: 67
     style:
       fill: '#27AE60'
       strokeWidth: 2
@@ -67,11 +67,11 @@ nodes:
     name: "No"
     type: decision
     position:
-      x: 246
-      y: 248
+      x: 248
+      y: 250
     dimensions:
-      width: 72
-      height: 72
+      width: 63
+      height: 63
     style:
       fill: '#E74C3C'
       strokeWidth: 2
@@ -79,8 +79,8 @@ nodes:
     name: End
     type: end
     position:
-      x: 242
-      y: 374
+      x: 244
+      y: 377
     dimensions:
       width: 79
       height: 79
@@ -92,8 +92,8 @@ nodes:
     name: Finish
     type: end
     position:
-      x: 646
-      y: 101
+      x: 647
+      y: 100
     dimensions:
       width: 85
       height: 85
@@ -104,8 +104,8 @@ nodes:
     name: New Step
     type: subroutine
     position:
-      x: 466
-      y: 369
+      x: 468
+      y: 371
     dimensions:
       width: 113
       height: 58
@@ -117,8 +117,8 @@ nodes:
     name: Rogue Step
     type: process
     position:
-      x: 629
-      y: 254
+      x: 631
+      y: 256
     dimensions:
       width: 118
       height: 60
@@ -232,4 +232,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-25T20:16:21.825542-05:00
+updated: 2025-09-25T20:23:51.556318-05:00

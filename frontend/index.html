@@ -114,20 +114,21 @@
         <div id="diagramTab" class="main-tab-content active">
             <div class="diagram-layout">
                 <div class="diagram-main">
-                    <div class="flowchart-container">
-                        <div id="flowchartDisplay">
-                            <div class="loading">Click "Load Diagram" to display the flowchart</div>
-                        </div>
-                        <!-- Compact Zoom overlay -->
-
-                        <div class="zoom-overlay " id="zoomOverlay">
-                            <button class="btn btn-sm btn-outline-secondary" onclick="zoomOut()"
-                                title="Zoom out">-</button>
-                            <div class="zoom-level"> <span id="zoomLevelLabel">100%</span> </div>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="zoomIn()"
-                                title="Zoom in">+</button>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="zoomReset()"
-                                title="Reset zoom to 100%">100%</button>
+                    <div class="card">
+                        <div class="card-body flowchart-body" id="flowchartCardBody">
+                            <div id="flowchartDisplay">
+                                <div class="loading">Click "Load Diagram" to display the flowchart</div>
+                            </div>
+                            <!-- Compact Zoom overlay -->
+                            <div class="zoom-overlay" id="zoomOverlay">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="zoomOut()"
+                                    title="Zoom out">-</button>
+                                <div class="zoom-level"><span id="zoomLevelLabel">100%</span></div>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="zoomIn()"
+                                    title="Zoom in">+</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="zoomReset()"
+                                    title="Reset zoom to 100%">100%</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -226,40 +227,8 @@
                         <label for="nodeBorderWidth">Border Width (px):</label>
                         <input type="number" id="nodeBorderWidth" min="0" max="10" step="1" value="2" />
                     </div>
-                    <div class="editor-group">
-                        <label for="nodeRotation">Rotation:</label>
-                        <input type="range" id="nodeRotation" min="0" max="360" step="15" value="0"
-                            oninput="updateRotationPreview()">
-                        <span id="rotationValue">0°</span>
-                    </div>
                 </div>
 
-                <div class="editor-section">
-                    <div class="editor-group">
-                        <label>Text Position:</label>
-                        <div class="text-position-grid">
-                            <button type="button" class="text-position-btn" data-h="flex-start" data-v="flex-start"
-                                title="Top Left">↖️</button>
-                            <button type="button" class="text-position-btn" data-h="center" data-v="flex-start"
-                                title="Top Center">⬆️</button>
-                            <button type="button" class="text-position-btn" data-h="flex-end" data-v="flex-start"
-                                title="Top Right">↗️</button>
-                            <button type="button" class="text-position-btn" data-h="flex-start" data-v="center"
-                                title="Middle Left">⬅️</button>
-                            <button type="button" class="text-position-btn" data-h="center" data-v="center"
-                                title="Middle Center" data-default="true">🎯</button>
-                            <button type="button" class="text-position-btn" data-h="flex-end" data-v="center"
-                                title="Middle Right">➡️</button>
-                            <button type="button" class="text-position-btn" data-h="flex-start" data-v="flex-end"
-                                title="Bottom Left">↙️</button>
-                            <button type="button" class="text-position-btn" data-h="center" data-v="flex-end"
-                                title="Bottom Center">⬇️</button>
-                            <button type="button" class="text-position-btn" data-h="flex-end" data-v="flex-end"
-                                title="Bottom Right">↘️</button>
-                        </div>
-                    </div>
-
-                </div>
             </div>
             <div class="editor-buttons">
                 <button class="btn btn-danger" onclick="confirmDeleteCurrentNode()">Delete</button>
@@ -2444,9 +2413,7 @@
 
             // Populate form with current values (name edited inline, so no field)
             document.getElementById('nodeType').value = node.type || 'process';
-            document.getElementById('nodeRotation').value = node.rotation || 0;
-            document.getElementById('rotationValue').textContent = (node.rotation || 0) + '°';
-            // text alignment control removed
+            // rotation and text alignment controls removed
             // Populate border controls
             const bcEl = document.getElementById('nodeBorderColor');
             const bwEl = document.getElementById('nodeBorderWidth');
@@ -2484,21 +2451,7 @@
                 });
             }
 
-            // Set text position buttons
-            const textPos = node.textPosition || { horizontal: 'center', vertical: 'center' };
-            document.querySelectorAll('.text-position-btn').forEach(btn => {
-                btn.classList.remove('selected');
-                const btnH = btn.dataset.h;
-                const btnV = btn.dataset.v;
-                if (btnH === textPos.horizontal && btnV === textPos.vertical) {
-                    btn.classList.add('selected');
-                }
-            });
-
-            // If no position is selected, default to center
-            if (!document.querySelector('.text-position-btn.selected')) {
-                document.querySelector('.text-position-btn[data-default="true"]').classList.add('selected');
-            }
+            // text position controls removed
 
             // Initialize color picker selection and favorites
             renderFavoriteColors();
@@ -2513,13 +2466,7 @@
                 };
             });
 
-            // Add text position button handlers
-            document.querySelectorAll('.text-position-btn').forEach(btn => {
-                btn.onclick = () => {
-                    document.querySelectorAll('.text-position-btn').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                };
-            });
+            // text position controls removed
 
             // Show the editor (docked)
             const ed = document.getElementById('nodeEditor');
@@ -2584,7 +2531,7 @@
             // Get form values
             const newName = editingNode.name; // inline-edited on shape
             const newType = document.getElementById('nodeType').value;
-            const newRotation = parseInt(document.getElementById('nodeRotation').value);
+            const newRotation = node.rotation || 0;
             let newWidth = editingNode.dimensions?.width || 100;
             let newHeight = editingNode.dimensions?.height || 50;
             // Diamonds must be square: force equal dimensions
@@ -2602,12 +2549,8 @@
                 newColor = selectedColor ? selectedColor.dataset.color : getNodeTypeColor(newType);
             }
 
-            // Get text position
-            const selectedPosition = document.querySelector('.text-position-btn.selected');
-            const textPosition = selectedPosition ? {
-                horizontal: selectedPosition.dataset.h,
-                vertical: selectedPosition.dataset.v
-            } : { horizontal: 'center', vertical: 'center' };
+            // Text position removed from editor; keep existing value
+            const textPosition = node.textPosition || { horizontal: 'center', vertical: 'center' };
 
             // Check if name changed (for auto-resize)
             const nameChanged = editingNode.name !== newName;
@@ -2876,6 +2819,9 @@
             let borderWidth = 2; // each side for non-hexagon shapes
             const t = (node.type || '').toLowerCase();
             if (t === 'data') borderWidth = 0; // hex uses overlay, not the element border
+
+            // Note: Decision (diamond) visual padding is reduced via CSS (.decision-node).
+            // Keep measurement defaults here to avoid sizing inconsistencies when nodeElement is null.
 
             // If we have a nodeElement, try to read actual computed styles
             if (nodeElement) {
@@ -3176,10 +3122,7 @@
             saveDiagram(true);
         }
 
-        function updateRotationPreview() {
-            const rotation = document.getElementById('nodeRotation').value;
-            document.getElementById('rotationValue').textContent = rotation + '°';
-        }
+        // rotation preview removed
 
         // Add keyboard shortcuts (and extended ones)
         document.addEventListener('keydown', (e) => {
