@@ -5280,6 +5280,75 @@
                 pathPoints = normalizeOrthogonalPath(pathPoints);
             }
 
+            // Helper: map technology to marker style
+            function getTechMarkerSpec(techRaw) {
+                const tech = (techRaw || '').toString().trim().toLowerCase();
+                // Colors: WS=red, REST=yellow, HTTP=green; keep a neutral default
+                const colors = {
+                    ws: { fill: '#e74c3c', stroke: '#b93a2c', label: 'WS' },
+                    websocket: { fill: '#e74c3c', stroke: '#b93a2c', label: 'WS' },
+                    rest: { fill: '#f1c40f', stroke: '#b7950b', label: 'REST' },
+                    http: { fill: '#27ae60', stroke: '#1f7a45', label: 'HTTP' },
+                    https: { fill: '#27ae60', stroke: '#1f7a45', label: 'HTTP' }
+                };
+                const spec = colors[tech];
+                if (spec) return { shape: 'rect', ...spec };
+                return { shape: 'rect', fill: '#7f8c8d', stroke: '#566163', label: (tech || 'N/A').toUpperCase().slice(0, 6) };
+            }
+
+            function drawTechMarker(svgGroup, start, next, edge) {
+                if (!edge || !edge.metadata) return;
+                const tech = edge.metadata.technology;
+                if (!tech) return;
+                const spec = getTechMarkerSpec(tech);
+                // Direction unit from start->next
+                const dx = next.x - start.x;
+                const dy = next.y - start.y;
+                const len = Math.max(1, Math.hypot(dx, dy));
+                const ux = dx / len, uy = dy / len;
+                // Place marker further after the start and farther away from the line (normal)
+                const along = 24; // px after start
+                const nx = -uy, ny = ux; // normal vector
+                const perp = -14; // offset away from line
+                const cx = start.x + ux * along + nx * perp;
+                const cy = start.y + uy * along + ny * perp;
+                // Create text first to measure and size marker with padding
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', String(cx));
+                label.setAttribute('y', String(cy));
+                label.setAttribute('class', 'tech-marker-label');
+                const textColor = getContrastingTextColor(spec.fill, '#ffffff', '#1f2937');
+                label.setAttribute('fill', textColor);
+                const labelText = spec.label || (tech || '').toString().toUpperCase().slice(0, 4);
+                label.textContent = labelText;
+                svgGroup.appendChild(label);
+                // Measure label box
+                let bbox = null;
+                try { bbox = label.getBBox(); } catch (_) { bbox = null; }
+                let textW = bbox && bbox.width ? bbox.width : Math.max(12, labelText.length * 6);
+                let textH = bbox && bbox.height ? bbox.height : 10;
+                const padX = 5, padY = 3; // padding around text inside marker
+                const halfW = (textW / 2) + padX;
+                const halfH = (textH / 2) + padY;
+                // Always draw a rectangle sized to the label + padding
+                let el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                const rectW = Math.ceil(halfW * 2);
+                const rectH = Math.ceil(halfH * 2);
+                el.setAttribute('x', String(cx - rectW / 2));
+                el.setAttribute('y', String(cy - rectH / 2));
+                el.setAttribute('width', String(rectW));
+                el.setAttribute('height', String(rectH));
+                el.setAttribute('rx', '3');
+                if (!el) return;
+                el.setAttribute('class', 'tech-marker');
+                el.setAttribute('fill', spec.fill);
+                el.setAttribute('stroke', spec.stroke);
+                el.setAttribute('stroke-width', '1');
+                el.setAttribute('pointer-events', 'none');
+                // Insert shape behind the label for proper stacking
+                svgGroup.insertBefore(el, label);
+            }
+
             // Create path element(s) based on routing mode
             if (pathPoints.length === 2 && routingMode === 'straight') {
                 // Simple straight line
@@ -5324,6 +5393,8 @@
                 // Remove need for double-click to open editor
                 svg.appendChild(hit);
                 svg.appendChild(line);
+                // Technology marker near start of line
+                drawTechMarker(svg, { x: pathPoints[0].x, y: pathPoints[0].y }, { x: pathPoints[1].x, y: pathPoints[1].y }, edge);
             } else {
                 // Multi-segment path using polyline or multiple lines
                 for (let i = 0; i < pathPoints.length - 1; i++) {
@@ -5367,6 +5438,10 @@
                     // Remove need for double-click to open editor
                     svg.appendChild(hit);
                     svg.appendChild(line);
+                    // For first visible segment, draw a single marker
+                    if (i === 0) {
+                        drawTechMarker(svg, { x: pathPoints[0].x, y: pathPoints[0].y }, { x: pathPoints[1].x, y: pathPoints[1].y }, edge);
+                    }
                 }
             }
 

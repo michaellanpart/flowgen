@@ -190,6 +190,10 @@ body { padding-top: 56px; background: #f3f4f6; font-family: -apple-system, Blink
 .connection-arrowhead { fill: #333; }
 .connection-label-bg { stroke: #333; stroke-width: 1; }
 
+/* Technology marker near edge start */
+.tech-marker { pointer-events: none; }
+.tech-marker-label { pointer-events: none; font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; fill: #ffffff; text-anchor: middle; dominant-baseline: middle; letter-spacing: .2px; }
+
 /* Selected edge styles */
 line.connection-line.selected { stroke: #2563eb !important; stroke-width: 3.5 !important; }
 polygon.connection-arrowhead.selected { fill: #2563eb !important; }
