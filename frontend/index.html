@@ -105,8 +105,7 @@
                         Auto Size
                         <span style="float: right; color: #6b7280; font-size: 11px;">Ctrl+Z</span>
                     </div>
-                    <div class="nav-menu-item"
-                        onclick="console.log('Menu align clicked, selectedNodeElement:', selectedNodeElement); alignSelectedNode();">
+                    <div class="nav-menu-item" onclick="alignSelectedNode()">
                         Align
                         <span style="float: right; color: #6b7280; font-size: 11px;">Ctrl+L</span>
                     </div>
@@ -3419,9 +3418,7 @@
                 }
             });
 
-            console.log('connectedPositions:', connectedPositions);
             if (connectedPositions.length === 0) {
-                console.log('No connected positions found');
                 showMessage('Could not find positions of connected nodes', 'error');
                 return;
             }
@@ -3452,11 +3449,7 @@
                 const selectedCenterX = currentX + selectedWidth / 2;
                 const selectedCenterY = currentY + selectedHeight / 2;
 
-                console.log('ALIGNMENT DEBUG:', {
-                    selectedCenter: { x: selectedCenterX, y: selectedCenterY },
-                    connectedCenter: { x: connectedCenterX, y: connectedCenterY },
-                    currentPos: { x: currentX, y: currentY }
-                });
+
 
                 // Determine relationship: are we to the left/right or above/below the connected node?
                 const horizontalDistance = Math.abs(selectedCenterX - connectedCenterX);
@@ -3466,20 +3459,12 @@
                     // We're to the LEFT or RIGHT of the connected node - align Y (vertical position)
                     newX = currentX; // Keep X position unchanged
                     newY = connectedCenterY - selectedHeight / 2; // Align Y centers
-                    console.log('HORIZONTAL RELATIONSHIP - Aligning Y axis:', {
-                        horizontalDistance, verticalDistance,
-                        oldPos: { x: currentX, y: currentY },
-                        newPos: { x: newX, y: newY }
-                    });
+
                 } else {
                     // We're ABOVE or BELOW the connected node - align X (horizontal position)  
                     newX = connectedCenterX - selectedWidth / 2; // Align X centers
                     newY = currentY; // Keep Y position unchanged
-                    console.log('VERTICAL RELATIONSHIP - Aligning X axis:', {
-                        horizontalDistance, verticalDistance,
-                        oldPos: { x: currentX, y: currentY },
-                        newPos: { x: newX, y: newY }
-                    });
+
                 }
             } else {
                 // Multiple connections: align to average connection point
