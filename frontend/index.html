@@ -4770,7 +4770,31 @@
         // Double-click canvas to add a node at clicked location (respect selected type)
         document.addEventListener('DOMContentLoaded', () => {
             const display = document.getElementById('flowchartDisplay');
-            display.addEventListener('dblclick', async (e) => {
+
+            // Add wheel event listener for trackpad/mouse wheel zoom with light throttling
+            let lastZoomTime = 0;
+            const ZOOM_THROTTLE_DELAY = 50; // ms between zoom actions (reduced for better responsiveness)
+
+            display.addEventListener('wheel', (e) => {
+                // Only zoom when Ctrl (Windows/Linux) or Cmd (Mac) is held
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+
+                    const now = Date.now();
+
+                    // Simple throttling - only zoom if enough time has passed
+                    if (now - lastZoomTime >= ZOOM_THROTTLE_DELAY) {
+                        if (e.deltaY < 0) {
+                            // Scrolling up - zoom in
+                            zoomIn();
+                        } else if (e.deltaY > 0) {
+                            // Scrolling down - zoom out
+                            zoomOut();
+                        }
+                        lastZoomTime = now;
+                    }
+                }
+            }); display.addEventListener('dblclick', async (e) => {
                 // Ignore if double-clicking an existing node or UI element
                 if (e.target.closest('.node') || e.target.closest('.ribbon') || e.target.closest('.modal')) return;
                 const typeSel = document.getElementById('insertNodeType');
@@ -5432,11 +5456,8 @@
                     selectEdge(id);
                     openEdgeEditor(id);
                 });
-                // Detect vertical lines and rotate label 90 degrees counter-clockwise
+                // Detect vertical lines for dimension swapping (rotation removed)
                 const isVertical = Math.abs(tx) < 0.1; // tangent is mostly vertical
-                if (isVertical) {
-                    label.setAttribute('transform', `rotate(-90, ${cx}, ${cy})`);
-                }
                 svgGroup.appendChild(label);
                 // Measure label box
                 let bbox = null;
@@ -5571,7 +5592,8 @@
             }
 
             // Draw a single centered technology marker below the connection
-            try { drawTechMarker(svg, pathPoints, edge); } catch (_) { }
+            // Technology marker now integrated into combined connection label
+            // try { drawTechMarker(svg, pathPoints, edge); } catch (_) { }
 
 
             // Add arrowhead at the end of the path
@@ -5637,8 +5659,8 @@
             svg.appendChild(arrowhead);
 
 
-            // Add edge label if present
-            if (edge.name) {
+            // Add combined edge label with technology badge if present
+            if (edge.name || (edge.metadata && edge.metadata.technology)) {
                 // Calculate label position based on path type
                 let labelMidX, labelMidY, labelLen, labelTx, labelTy, labelNx, labelNy;
 
@@ -5679,39 +5701,81 @@
                     labelNx = -labelTy; labelNy = labelTx;
                 }
 
-                // Create and append text first so getBBox measures correctly
-                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                text.setAttribute('text-anchor', 'middle');
-                text.setAttribute('font-family', 'Arial');
-                text.setAttribute('font-size', '10');
-                text.setAttribute('fill', '#2c3e50');
-                text.setAttribute('class', 'connection-label');
-                text.setAttribute('data-edge-id', edge.id || `${edge.from}-${edge.to}`);
-                text.style.cursor = 'pointer';
-                text.textContent = edge.name;
-                // Add click handler to select connector
-                text.addEventListener('click', (ev) => {
+                // Create combined label group
+                const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                labelGroup.setAttribute('class', 'combined-connection-label');
+                labelGroup.setAttribute('data-edge-id', edge.id || `${edge.from}-${edge.to}`);
+
+                // Get technology info
+                const tech = edge.metadata?.technology;
+                const techSpec = tech ? getTechMarkerSpec(tech) : null;
+
+                // Create connector name text (top line)
+                const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                nameText.setAttribute('text-anchor', 'middle');
+                nameText.setAttribute('font-family', 'Arial');
+                nameText.setAttribute('font-size', '10');
+                nameText.setAttribute('fill', '#2c3e50');
+                nameText.setAttribute('class', 'connection-label-name');
+                nameText.textContent = edge.name || '';
+                labelGroup.appendChild(nameText);
+
+                // Create technology text (bottom line) if present
+                let techText = null;
+                if (techSpec) {
+                    techText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    techText.setAttribute('text-anchor', 'middle');
+                    techText.setAttribute('font-family', 'Arial');
+                    techText.setAttribute('font-size', '9');
+                    techText.setAttribute('fill', '#ffffff');
+                    techText.setAttribute('class', 'connection-label-tech');
+                    techText.textContent = techSpec.label || tech.toUpperCase();
+                    labelGroup.appendChild(techText);
+                }
+
+                // Add click handler to the group
+                labelGroup.style.cursor = 'pointer';
+                labelGroup.addEventListener('click', (ev) => {
                     ev.stopPropagation();
-                    const id = text.getAttribute('data-edge-id');
+                    const id = labelGroup.getAttribute('data-edge-id');
                     if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
                     selectEdge(id);
                     openEdgeEditor(id);
                 });
-                svg.appendChild(text);
 
-                // Measure text to size rect
-                let bbox = null;
-                try { bbox = text.getBBox(); } catch (_) { bbox = null; }
+                svg.appendChild(labelGroup);
+
+                // Measure combined label to size rect
                 let textW = 0, textH = 0;
-                if (bbox && bbox.width > 0 && bbox.height > 0) {
-                    textW = bbox.width; textH = bbox.height;
-                } else if (typeof text.getComputedTextLength === 'function') {
-                    textW = Math.max(10, text.getComputedTextLength());
-                    textH = 12; // approximate for 10px font
+
+                // Measure name text
+                let nameBbox = null;
+                try { nameBbox = nameText.getBBox(); } catch (_) { nameBbox = null; }
+                let nameW = 0, nameH = 0;
+                if (nameBbox && nameBbox.width > 0 && nameBbox.height > 0) {
+                    nameW = nameBbox.width; nameH = nameBbox.height;
                 } else {
-                    textW = Math.max(40, (edge.name || '').length * 6);
-                    textH = 12;
+                    nameW = Math.max(40, (edge.name || '').length * 6);
+                    nameH = 12;
                 }
+
+                // Measure tech text if present
+                let techW = 0, techH = 0;
+                if (techText) {
+                    let techBbox = null;
+                    try { techBbox = techText.getBBox(); } catch (_) { techBbox = null; }
+                    if (techBbox && techBbox.width > 0 && techBbox.height > 0) {
+                        techW = techBbox.width; techH = techBbox.height;
+                    } else {
+                        const techLabel = techSpec?.label || tech?.toUpperCase() || '';
+                        techW = Math.max(20, techLabel.length * 5);
+                        techH = 10;
+                    }
+                }
+
+                // Combined dimensions
+                textW = Math.max(nameW, techW);
+                textH = nameH + (techText ? techH + 2 : 0); // 2px spacing between lines
 
                 const padX = 6, padY = 4;
                 const rectW = textW + padX * 2;
@@ -5734,7 +5798,7 @@
                     let labelNormX = labelNx, labelNormY = labelNy;
                     // Ensure normal points "above" (upward on screen) - opposite of tech marker placement
                     if (labelNormY > 0) { labelNormX = -labelNormX; labelNormY = -labelNormY; }
-                    const baseOffset = 20; // increased spacing between connector and standard edge labels
+                    const baseOffset = 0; // center label directly on connector line
                     centerX = labelMidX + labelNormX * baseOffset;
                     centerY = labelMidY + labelNormY * baseOffset;
                     dirX = labelNormX; dirY = labelNormY;
@@ -5780,15 +5844,16 @@
                     }
                 }
 
-                // Create rect and place text centered on it
+                // Create white background for text legibility (no border)
                 const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                 rect.setAttribute('x', rectX.toString());
                 rect.setAttribute('y', rectY.toString());
                 rect.setAttribute('width', rectW.toString());
                 rect.setAttribute('height', rectH.toString());
                 rect.setAttribute('fill', 'white');
-                rect.setAttribute('stroke', '#bdc3c7');
-                rect.setAttribute('rx', '3');
+                rect.setAttribute('stroke', 'none');
+                rect.style.stroke = 'none';
+                rect.style.border = 'none';
                 rect.setAttribute('class', 'connection-label-bg');
                 rect.setAttribute('data-edge-id', edge.id || `${edge.from}-${edge.to}`);
                 rect.setAttribute('pointer-events', 'auto');
@@ -5851,11 +5916,45 @@
                 });
                 // Remove need for double-click to open editor on label background
 
-                // Insert rect behind text and position text
-                svg.insertBefore(rect, text);
-                text.setAttribute('x', (rectX + rectW / 2).toString());
-                text.setAttribute('y', (rectY + rectH / 2).toString());
-                text.setAttribute('dominant-baseline', 'middle');
+                // Insert rect behind label group and position text elements
+                svg.insertBefore(rect, labelGroup);
+
+                // Position name text (top line)
+                const labelCenterX = rectX + rectW / 2;
+                nameText.setAttribute('x', labelCenterX.toString());
+                nameText.setAttribute('dominant-baseline', 'middle');
+
+                if (techText) {
+                    // Two-line layout: name on top, tech on bottom
+                    const lineSpacing = 14; // Space between lines
+                    const centerY = rectY + rectH / 2;
+                    const topY = centerY - lineSpacing / 2;
+                    const bottomY = centerY + lineSpacing / 2;
+
+                    nameText.setAttribute('y', topY.toString());
+                    nameText.setAttribute('dominant-baseline', 'middle');
+
+                    techText.setAttribute('x', labelCenterX.toString());
+                    techText.setAttribute('y', bottomY.toString());
+                    techText.setAttribute('dominant-baseline', 'middle');
+
+                    // Create colored background for tech text (compact)
+                    if (techSpec) {
+                        const techBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        techBg.setAttribute('x', (labelCenterX - techW / 2 - 2).toString());
+                        techBg.setAttribute('y', (bottomY - 6).toString());
+                        techBg.setAttribute('width', (techW + 4).toString());
+                        techBg.setAttribute('height', '12');
+                        techBg.setAttribute('rx', '2');
+                        techBg.setAttribute('fill', techSpec.fill);
+                        techBg.setAttribute('class', 'connection-label-tech-bg');
+                        labelGroup.insertBefore(techBg, techText);
+                    }
+                } else {
+                    // Single line layout: center the name text
+                    nameText.setAttribute('y', (rectY + rectH / 2).toString());
+                    nameText.setAttribute('dominant-baseline', 'middle');
+                }
             }
         }
 

@@ -188,7 +188,7 @@ body { padding-top: 56px; background: #f3f4f6; font-family: -apple-system, Blink
 /* Connection lines & arrows */
 .connection-line { stroke: #333; stroke-width: 2; }
 .connection-arrowhead { fill: #333; }
-.connection-label-bg { stroke: #333; stroke-width: 1; }
+.connection-label-bg { stroke: none; }
 
 /* Technology marker near edge start */
 .tech-marker { pointer-events: auto; cursor: pointer; }
@@ -197,7 +197,7 @@ body { padding-top: 56px; background: #f3f4f6; font-family: -apple-system, Blink
 /* Selected edge styles */
 line.connection-line.selected { stroke: #2563eb !important; stroke-width: 3.5 !important; }
 polygon.connection-arrowhead.selected { fill: #2563eb !important; }
-rect.connection-label-bg.selected { stroke: #2563eb !important; stroke-width: 1.5 !important; }
+rect.connection-label-bg.selected { stroke: none !important; }
 
 /* Mini toolbar for nodes (hover to reveal) */
 .node-toolbar { position: absolute; top: 4px; right: 4px; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.95); border: 1px solid #e5e7eb; border-radius: 8px; padding: 2px 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); z-index: 30; opacity: 0; pointer-events: none; transition: opacity .12s ease; }
