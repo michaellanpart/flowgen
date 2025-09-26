@@ -49,8 +49,9 @@ body { padding-top: 56px; background: #f3f4f6; font-family: -apple-system, Blink
 .card-footer { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 8px 12px; flex: 0 0 auto; }
 
 /* Right panel card adjustments */
-#infoPanel { display: flex; flex-direction: column; align-self: flex-start; height: auto; }
+#infoPanel { display: flex; flex-direction: column; align-self: stretch; height: 100%; min-height: 0; }
 #infoPanelBody:empty { padding: 0; }
+#infoPanelBody { flex: 1 1 auto; min-height: 0; overflow: auto; }
 #infoPanelFooter:empty { display: none; }
 #infoPanelFooter.card-footer { 
 	/* Normalize padding and prevent stray floats */
