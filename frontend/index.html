@@ -1156,6 +1156,9 @@
                 return;
             }
             isUpdatingConnections = true;
+
+            // Preserve current selection to restore after redraw
+            const currentSelection = selectedEdgeId;
             const display = document.getElementById('flowchartDisplay');
             if (!display) {
                 isUpdatingConnections = false;
@@ -1270,6 +1273,11 @@
                 // Release the update lock even if something throws
                 isUpdatingConnections = false;
                 // hover info disabled
+
+                // Restore selection if there was one before the update
+                if (currentSelection) {
+                    selectEdge(currentSelection);
+                }
             }
         }
 
@@ -1590,8 +1598,13 @@
             // Move editor buttons to panel footer for proper card layout
             const footerHost = document.getElementById('infoPanelFooter');
             const btns = editor.querySelector('.editor-buttons');
-            if (footerHost && btns) {
-                footerHost.replaceChildren(btns);
+            if (footerHost) {
+                if (btns) {
+                    footerHost.replaceChildren(btns);
+                } else {
+                    // Fallback: create delete button if .editor-buttons is missing
+                    footerHost.innerHTML = '<button class="btn btn-danger" onclick="confirmDeleteCurrentNode()">Delete</button>';
+                }
                 footerHost.classList.remove('d-none');
             }
             editorDocked = true;
@@ -1751,26 +1764,94 @@
             }
         }
 
+        function createEdgeEditorElement() {
+            // Create the edgeEditor element if it doesn't exist
+            if (document.getElementById('edgeEditor')) return; // Already exists
+
+            const editorHtml = `
+                <div id="edgeEditor" class="node-editor" style="display:none;">
+                    <div class="editor-content">
+                        <div class="editor-group">
+                            <label for="edgeName">Label:</label>
+                            <input type="text" id="edgeName" placeholder="e.g. calls, publishes" />
+                        </div>
+                        <div class="compact-row">
+                            <div class="editor-group">
+                                <label for="edgeTechnology">Technology:</label>
+                                <select id="edgeTechnology">
+                                    <option value="">— None —</option>
+                                    <option value="rest">REST</option>
+                                    <option value="ws">WebSocket</option>
+                                    <option value="grpc">gRPC</option>
+                                </select>
+                            </div>
+                            <div class="editor-group">
+                                <label for="edgeWidth">Width (px):</label>
+                                <input type="number" id="edgeWidth" min="1" max="10" step="1" value="2" />
+                            </div>
+                        </div>
+                        <div class="compact-row">
+                            <div class="editor-group">
+                                <label for="edgeStroke">Stroke Color:</label>
+                                <input type="color" id="edgeStroke" value="#34495e" />
+                            </div>
+                            <div class="editor-group">
+                                <label for="edgeDash">Line Style:</label>
+                                <select id="edgeDash">
+                                    <option value="solid">Solid</option>
+                                    <option value="dotted">Dotted</option>
+                                    <option value="dashed">Dashed</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="editor-buttons">
+                        <button class="btn btn-danger" onclick="deleteEdgeFromEditor()">Delete</button>
+                    </div>
+                </div>
+            `;
+
+            // Insert the editor element into the document body
+            document.body.insertAdjacentHTML('beforeend', editorHtml);
+        }
+
         function openEdgeEditor(edgeId) {
+            // Close any existing edge editor first
+            closeEdgeEditor();
             const edge = currentDiagram?.edges?.find(e => (e.id || `${e.from}-${e.to}`) === edgeId);
             if (!edge) return;
-            const modal = document.getElementById('edgeEditor');
+            let modal = document.getElementById('edgeEditor');
+            if (!modal) {
+                console.warn('edgeEditor element not found, recreating it');
+                // Recreate the edgeEditor element
+                createEdgeEditorElement();
+                modal = document.getElementById('edgeEditor');
+                if (!modal) {
+                    console.error('Could not recreate edgeEditor element');
+                    return;
+                }
+            }
             modal.dataset.edgeId = edgeId;
-            document.getElementById('edgeName').value = edge.name || '';
+            const edgeName = document.getElementById('edgeName');
+            if (edgeName) edgeName.value = edge.name || '';
             const meta = edge.metadata || {};
-            document.getElementById('edgeTechnology').value = meta.technology || '';
+            const edgeTechnology = document.getElementById('edgeTechnology');
+            if (edgeTechnology) edgeTechnology.value = meta.technology || '';
 
             const style = edge.style || {};
-            document.getElementById('edgeStroke').value = style.stroke || '#34495e';
-            document.getElementById('edgeWidth').value = style.strokeWidth || 2;
-            document.getElementById('edgeDash').value = dashArrayToName(style.strokeDasharray || '');
+            const edgeStroke = document.getElementById('edgeStroke');
+            if (edgeStroke) edgeStroke.value = style.stroke || '#34495e';
+            const edgeWidth = document.getElementById('edgeWidth');
+            if (edgeWidth) edgeWidth.value = style.strokeWidth || 2;
+            const edgeDash = document.getElementById('edgeDash');
+            if (edgeDash) edgeDash.value = dashArrayToName(style.strokeDasharray || '');
             // Ensure panel is open
             const panel = document.getElementById('infoPanel');
             if (panel) panel.classList.add('temp-open');
             applyInfoPanelState();
             // Dock inside Info Panel
             dockEdgeEditor();
-            modal.style.display = 'block';
+            if (modal) modal.style.display = 'block';
 
             // Live preview bindings: reflect changes immediately in the diagram
             try {
@@ -1829,6 +1910,7 @@
 
         function closeEdgeEditor() {
             const modal = document.getElementById('edgeEditor');
+            if (!modal) return; // Guard against missing element
             modal.style.display = 'none';
             modal.dataset.edgeId = '';
             // Undock and restore panel
@@ -5337,10 +5419,24 @@
                 label.setAttribute('x', String(cx));
                 label.setAttribute('y', String(cy));
                 label.setAttribute('class', 'tech-marker-label');
+                label.setAttribute('data-edge-id', edge.id || `${edge.from}-${edge.to}`);
                 const textColor = getContrastingTextColor(spec.fill, '#ffffff', '#1f2937');
                 label.setAttribute('fill', textColor);
                 const labelText = spec.label || (tech || '').toString().toUpperCase().slice(0, 4);
                 label.textContent = labelText;
+                // Add click handler to select connector
+                label.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    const id = label.getAttribute('data-edge-id');
+                    if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
+                    selectEdge(id);
+                    openEdgeEditor(id);
+                });
+                // Detect vertical lines and rotate label 90 degrees counter-clockwise
+                const isVertical = Math.abs(tx) < 0.1; // tangent is mostly vertical
+                if (isVertical) {
+                    label.setAttribute('transform', `rotate(-90, ${cx}, ${cy})`);
+                }
                 svgGroup.appendChild(label);
                 // Measure label box
                 let bbox = null;
@@ -5352,8 +5448,14 @@
                 const halfH = (textH / 2) + padY;
                 // Always draw a rectangle sized to the label + padding
                 let el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                const rectW = Math.ceil(halfW * 2);
-                const rectH = Math.ceil(halfH * 2);
+                let rectW = Math.ceil(halfW * 2);
+                let rectH = Math.ceil(halfH * 2);
+
+                // For vertical connectors, swap dimensions to better fit rotated text
+                if (isVertical) {
+                    [rectW, rectH] = [rectH, rectW];
+                }
+
                 el.setAttribute('x', String(cx - rectW / 2));
                 el.setAttribute('y', String(cy - rectH / 2));
                 el.setAttribute('width', String(rectW));
@@ -5361,10 +5463,19 @@
                 el.setAttribute('rx', '3');
                 if (!el) return;
                 el.setAttribute('class', 'tech-marker');
+                el.setAttribute('data-edge-id', edge.id || `${edge.from}-${edge.to}`);
                 el.setAttribute('fill', spec.fill);
                 el.setAttribute('stroke', spec.stroke);
                 el.setAttribute('stroke-width', '1');
-                el.setAttribute('pointer-events', 'none');
+                el.style.cursor = 'pointer';
+                // Add click handler to select connector
+                el.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    const id = el.getAttribute('data-edge-id');
+                    if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
+                    selectEdge(id);
+                    openEdgeEditor(id);
+                });
                 // Insert shape behind the label for proper stacking
                 svgGroup.insertBefore(el, label);
             }
@@ -5393,14 +5504,14 @@
                 hit.setAttribute('y2', pathPoints[1].y);
                 hit.setAttribute('data-edge-id', edgeId);
                 hit.style.stroke = 'transparent';
-                hit.style.strokeWidth = String(Math.max(10, (style.strokeWidth || 2) + 8));
+                hit.style.strokeWidth = String(Math.max(16, (style.strokeWidth || 2) + 12));
                 hit.style.pointerEvents = 'stroke';
                 hit.addEventListener('click', (ev) => {
                     ev.stopPropagation();
                     const id = hit.getAttribute('data-edge-id');
                     if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
                     selectEdge(id);
-                    if (editMode) openEdgeEditor(id);
+                    openEdgeEditor(id);
                 });
                 line.addEventListener('click', (ev) => {
                     ev.stopPropagation();
@@ -5408,7 +5519,7 @@
                     if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
                     // Single-click selects and opens the edge editor
                     selectEdge(id);
-                    if (editMode) openEdgeEditor(id);
+                    openEdgeEditor(id);
                 });
                 // Remove need for double-click to open editor
                 svg.appendChild(hit);
@@ -5437,21 +5548,21 @@
                     hit.setAttribute('y2', pathPoints[i + 1].y);
                     hit.setAttribute('data-edge-id', edgeId);
                     hit.style.stroke = 'transparent';
-                    hit.style.strokeWidth = String(Math.max(10, (style.strokeWidth || 2) + 8));
+                    hit.style.strokeWidth = String(Math.max(16, (style.strokeWidth || 2) + 12));
                     hit.style.pointerEvents = 'stroke';
                     hit.addEventListener('click', (ev) => {
                         ev.stopPropagation();
                         const id = hit.getAttribute('data-edge-id');
                         if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
                         selectEdge(id);
-                        if (editMode) openEdgeEditor(id);
+                        openEdgeEditor(id);
                     });
                     line.addEventListener('click', (ev) => {
                         ev.stopPropagation();
                         const id = line.getAttribute('data-edge-id');
                         if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
                         selectEdge(id);
-                        if (editMode) openEdgeEditor(id);
+                        openEdgeEditor(id);
                     });
                     // Remove need for double-click to open editor
                     svg.appendChild(hit);
@@ -5576,8 +5687,16 @@
                 text.setAttribute('fill', '#2c3e50');
                 text.setAttribute('class', 'connection-label');
                 text.setAttribute('data-edge-id', edge.id || `${edge.from}-${edge.to}`);
-                text.setAttribute('pointer-events', 'none');
+                text.style.cursor = 'pointer';
                 text.textContent = edge.name;
+                // Add click handler to select connector
+                text.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    const id = text.getAttribute('data-edge-id');
+                    if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
+                    selectEdge(id);
+                    openEdgeEditor(id);
+                });
                 svg.appendChild(text);
 
                 // Measure text to size rect
@@ -5610,22 +5729,15 @@
                     const s = Math.sign(stored.perp) || 1;
                     dirX = labelNx * s; dirY = labelNy * s;
                 } else {
-                    // Choose the normal that is farther from both node centers
-                    function minDistToNodes(cx, cy) {
-                        const d1 = Math.hypot(cx - fromNode.centerX, cy - fromNode.centerY);
-                        const d2 = Math.hypot(cx - toNode.centerX, cy - toNode.centerY);
-                        return Math.min(d1, d2);
-                    }
-                    const baseOffset = 10;
-                    const cand1 = { cx: labelMidX + labelNx * baseOffset, cy: labelMidY + labelNy * baseOffset };
-                    const cand2 = { cx: labelMidX + -labelNx * baseOffset, cy: labelMidY + -labelNy * baseOffset };
-                    const pick1 = minDistToNodes(cand1.cx, cand1.cy);
-                    const pick2 = minDistToNodes(cand2.cx, cand2.cy);
-                    const useFirst = pick1 >= pick2;
-                    centerX = useFirst ? cand1.cx : cand2.cx;
-                    centerY = useFirst ? cand1.cy : cand2.cy;
-                    dirX = useFirst ? labelNx : -labelNx;
-                    dirY = useFirst ? labelNy : -labelNy;
+                    // Place label on opposite side from tech marker (tech markers go "below", so labels go "above")
+                    // Tech markers use positive normal (below), so use negative normal (above) for labels
+                    let labelNormX = labelNx, labelNormY = labelNy;
+                    // Ensure normal points "above" (upward on screen) - opposite of tech marker placement
+                    if (labelNormY > 0) { labelNormX = -labelNormX; labelNormY = -labelNormY; }
+                    const baseOffset = 20; // increased spacing between connector and standard edge labels
+                    centerX = labelMidX + labelNormX * baseOffset;
+                    centerY = labelMidY + labelNormY * baseOffset;
+                    dirX = labelNormX; dirY = labelNormY;
                 }
 
                 // Initial rect position
@@ -5734,7 +5846,8 @@
                     const id = rect.getAttribute('data-edge-id');
                     if (ev.altKey || ev.metaKey) { selectedEdgeId = id; deleteSelectedEdge(); return; }
                     if (didDrag) { didDrag = false; return; }
-                    if (editMode) { openInlineEdgeLabelEditor(id); } else { selectEdge(id); }
+                    selectEdge(id);
+                    openEdgeEditor(id);
                 });
                 // Remove need for double-click to open editor on label background
 

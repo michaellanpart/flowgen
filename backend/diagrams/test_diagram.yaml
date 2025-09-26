@@ -7,7 +7,7 @@ nodes:
     type: start
     position:
       x: 100
-      y: 112
+      y: 100
     dimensions:
       width: 79
       height: 79
@@ -18,8 +18,8 @@ nodes:
     name: Step 2
     type: process
     position:
-      x: 456
-      y: 257
+      x: 474
+      y: 281
     dimensions:
       width: 138
       height: 54
@@ -30,8 +30,8 @@ nodes:
     name: Validate
     type: process
     position:
-      x: 221
-      y: 124
+      x: 236
+      y: 141
     dimensions:
       width: 185
       height: 57
@@ -42,8 +42,8 @@ nodes:
     name: Step 3
     type: process
     position:
-      x: 451
-      y: 117
+      x: 469
+      y: 141
     dimensions:
       width: 147
       height: 58
@@ -55,8 +55,8 @@ nodes:
     name: Pass
     type: decision
     position:
-      x: 328
-      y: 250
+      x: 346
+      y: 274
     dimensions:
       width: 67
       height: 67
@@ -67,8 +67,8 @@ nodes:
     name: Fail
     type: decision
     position:
-      x: 230
-      y: 250
+      x: 248
+      y: 274
     dimensions:
       width: 66
       height: 66
@@ -79,8 +79,8 @@ nodes:
     name: End
     type: end
     position:
-      x: 223
-      y: 374
+      x: 241
+      y: 398
     dimensions:
       width: 79
       height: 79
@@ -92,8 +92,8 @@ nodes:
     name: Finish
     type: end
     position:
-      x: 711
-      y: 100
+      x: 729
+      y: 124
     dimensions:
       width: 92
       height: 92
@@ -104,8 +104,8 @@ nodes:
     name: New Step
     type: subroutine
     position:
-      x: 468
-      y: 383
+      x: 486
+      y: 433
     dimensions:
       width: 113
       height: 58
@@ -117,8 +117,8 @@ nodes:
     name: New Stepe
     type: process
     position:
-      x: 692
-      y: 304
+      x: 710
+      y: 328
     dimensions:
       width: 113
       height: 60
@@ -202,7 +202,7 @@ edges:
       strokeWidth: 2
       strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758772843863
-    name: ""
+    name: test
     metadata:
       technology: rest
     type: ""
@@ -214,9 +214,22 @@ edges:
       strokeDasharray: 6,2
   - id: connector_1758492243168-connector_1758492243168_step_1758807023731-1758807023734
     name: ""
+    metadata:
+      technology: grpc
     type: ""
     from: connector_1758492243168
     to: connector_1758492243168_step_1758807023731
+    style:
+      stroke: '#9c9ea0'
+      strokeWidth: 2
+      strokeDasharray: 6,2
+  - id: connector_1758492243168-process_1758855070153-1758863435947
+    name: doing stuff
+    metadata:
+      technology: ws
+    type: ""
+    from: connector_1758492243168
+    to: process_1758855070153
     style:
       stroke: '#9c9ea0'
       strokeWidth: 2
@@ -227,4 +240,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-25T21:53:13.593663-05:00
+updated: 2025-09-26T00:27:04.567047-05:00
