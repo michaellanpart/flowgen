@@ -105,7 +105,8 @@
                         Auto Size
                         <span style="float: right; color: #6b7280; font-size: 11px;">Ctrl+Z</span>
                     </div>
-                    <div class="nav-menu-item" onclick="alignSelectedNode()">
+                    <div class="nav-menu-item"
+                        onclick="console.log('Menu align clicked, selectedNodeElement:', selectedNodeElement); alignSelectedNode();">
                         Align
                         <span style="float: right; color: #6b7280; font-size: 11px;">Ctrl+L</span>
                     </div>
@@ -3397,17 +3398,16 @@
                 return;
             }
 
-            // Get positions of connected nodes
+            // Get positions of connected nodes (remove duplicates first)
+            const uniqueConnectedNodeIds = [...new Set(connectedNodeIds)];
             const connectedPositions = [];
-            connectedNodeIds.forEach(nodeId => {
+            uniqueConnectedNodeIds.forEach(nodeId => {
                 const nodeEl = document.querySelector(`[data-node-id="${nodeId}"]`);
                 if (nodeEl) {
                     const x = parseInt(nodeEl.style.left) || 0;
                     const y = parseInt(nodeEl.style.top) || 0;
                     const width = parseInt(nodeEl.style.width) || 120;
                     const height = parseInt(nodeEl.style.height) || 60;
-
-
 
                     connectedPositions.push({
                         centerX: x + width / 2,
@@ -3417,7 +3417,11 @@
                         nodeEl: nodeEl
                     });
                 }
-            }); if (connectedPositions.length === 0) {
+            });
+
+            console.log('connectedPositions:', connectedPositions);
+            if (connectedPositions.length === 0) {
+                console.log('No connected positions found');
                 showMessage('Could not find positions of connected nodes', 'error');
                 return;
             }
@@ -3448,20 +3452,34 @@
                 const selectedCenterX = currentX + selectedWidth / 2;
                 const selectedCenterY = currentY + selectedHeight / 2;
 
-                // Determine if nodes are more horizontally or vertically separated
-                const deltaX = Math.abs(selectedCenterX - connectedCenterX);
-                const deltaY = Math.abs(selectedCenterY - connectedCenterY);
+                console.log('ALIGNMENT DEBUG:', {
+                    selectedCenter: { x: selectedCenterX, y: selectedCenterY },
+                    connectedCenter: { x: connectedCenterX, y: connectedCenterY },
+                    currentPos: { x: currentX, y: currentY }
+                });
 
-                if (deltaX > deltaY) {
-                    // Nodes are side by side - align for horizontal connection
-                    // Align the Y coordinates of connection points (middle of each node)
-                    newY = connectedCenterY - selectedHeight / 2;
-                    console.log('Horizontal connection - aligning Y connection points');
+                // Determine relationship: are we to the left/right or above/below the connected node?
+                const horizontalDistance = Math.abs(selectedCenterX - connectedCenterX);
+                const verticalDistance = Math.abs(selectedCenterY - connectedCenterY);
+
+                if (horizontalDistance > verticalDistance) {
+                    // We're to the LEFT or RIGHT of the connected node - align Y (vertical position)
+                    newX = currentX; // Keep X position unchanged
+                    newY = connectedCenterY - selectedHeight / 2; // Align Y centers
+                    console.log('HORIZONTAL RELATIONSHIP - Aligning Y axis:', {
+                        horizontalDistance, verticalDistance,
+                        oldPos: { x: currentX, y: currentY },
+                        newPos: { x: newX, y: newY }
+                    });
                 } else {
-                    // Nodes are above/below - align for vertical connection
-                    // Align the X coordinates of connection points (middle of each node)
-                    newX = connectedCenterX - selectedWidth / 2;
-                    console.log('Vertical connection - aligning X connection points');
+                    // We're ABOVE or BELOW the connected node - align X (horizontal position)  
+                    newX = connectedCenterX - selectedWidth / 2; // Align X centers
+                    newY = currentY; // Keep Y position unchanged
+                    console.log('VERTICAL RELATIONSHIP - Aligning X axis:', {
+                        horizontalDistance, verticalDistance,
+                        oldPos: { x: currentX, y: currentY },
+                        newPos: { x: newX, y: newY }
+                    });
                 }
             } else {
                 // Multiple connections: align to average connection point
@@ -3497,7 +3515,8 @@
 
             // Mark as changed and refresh connections
             hasUnsavedChanges = true;
-            document.getElementById('saveButton').classList.add('show');
+            const sb = document.getElementById('saveButton');
+            if (sb) sb.classList.add('show');
             scheduleAutoSave();
             updateConnections();
 
@@ -5576,16 +5595,20 @@
                 const tech = edge.metadata.technology;
                 if (!tech || !Array.isArray(pathPoints) || pathPoints.length < 2) return;
                 const spec = getTechMarkerSpec(tech);
-                // Compute a midpoint and orientation: straight => segment midpoint; orth => longest segment midpoint
+                // Compute a position along the line (further from start) and orientation
                 let midX, midY, tx, ty, nx, ny;
+                const alongOffset = 30; // px further along the line from midpoint toward end
                 if (pathPoints.length === 2) {
-                    midX = (pathPoints[0].x + pathPoints[1].x) / 2;
-                    midY = (pathPoints[0].y + pathPoints[1].y) / 2;
                     const dx = pathPoints[1].x - pathPoints[0].x;
                     const dy = pathPoints[1].y - pathPoints[0].y;
                     const len = Math.max(1, Math.hypot(dx, dy));
                     tx = dx / len; ty = dy / len;
                     nx = -ty; ny = tx;
+                    // Move from midpoint further toward the end
+                    const baseMidX = (pathPoints[0].x + pathPoints[1].x) / 2;
+                    const baseMidY = (pathPoints[0].y + pathPoints[1].y) / 2;
+                    midX = baseMidX + tx * alongOffset;
+                    midY = baseMidY + ty * alongOffset;
                 } else {
                     // Find longest segment
                     let longest = 0; let idx = 0;
@@ -5596,10 +5619,14 @@
                         if (l > longest) { longest = l; idx = i; }
                     }
                     const p1 = pathPoints[idx], p2 = pathPoints[idx + 1];
-                    midX = (p1.x + p2.x) / 2; midY = (p1.y + p2.y) / 2;
                     const dx = p2.x - p1.x; const dy = p2.y - p1.y;
                     const len = Math.max(1, Math.hypot(dx, dy));
                     tx = dx / len; ty = dy / len; nx = -ty; ny = tx;
+                    // Move from midpoint further toward the end of the segment
+                    const baseMidX = (p1.x + p2.x) / 2;
+                    const baseMidY = (p1.y + p2.y) / 2;
+                    midX = baseMidX + tx * alongOffset;
+                    midY = baseMidY + ty * alongOffset;
                 }
                 // Ensure normal points "below" (downward on screen)
                 if (ny < 0) { nx = -nx; ny = -ny; }
