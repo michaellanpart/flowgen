@@ -7,7 +7,7 @@ nodes:
     type: start
     position:
       x: 100
-      y: 117
+      y: 112
     dimensions:
       width: 79
       height: 79
@@ -18,8 +18,8 @@ nodes:
     name: Step 2
     type: process
     position:
-      x: 454
-      y: 262
+      x: 456
+      y: 257
     dimensions:
       width: 138
       height: 54
@@ -30,8 +30,8 @@ nodes:
     name: Validate
     type: process
     position:
-      x: 219
-      y: 129
+      x: 221
+      y: 124
     dimensions:
       width: 185
       height: 57
@@ -42,8 +42,8 @@ nodes:
     name: Step 3
     type: process
     position:
-      x: 452
-      y: 126
+      x: 451
+      y: 117
     dimensions:
       width: 147
       height: 58
@@ -55,8 +55,8 @@ nodes:
     name: Pass
     type: decision
     position:
-      x: 326
-      y: 255
+      x: 328
+      y: 250
     dimensions:
       width: 67
       height: 67
@@ -67,8 +67,8 @@ nodes:
     name: Fail
     type: decision
     position:
-      x: 228
-      y: 255
+      x: 230
+      y: 250
     dimensions:
       width: 66
       height: 66
@@ -79,8 +79,8 @@ nodes:
     name: End
     type: end
     position:
-      x: 221
-      y: 379
+      x: 223
+      y: 374
     dimensions:
       width: 79
       height: 79
@@ -92,11 +92,11 @@ nodes:
     name: Finish
     type: end
     position:
-      x: 735
-      y: 91
+      x: 711
+      y: 100
     dimensions:
-      width: 128
-      height: 128
+      width: 92
+      height: 92
     style:
       fill: '#2ECC71'
       strokeWidth: 2
@@ -105,12 +105,25 @@ nodes:
     type: subroutine
     position:
       x: 468
-      y: 389
+      y: 383
     dimensions:
       width: 113
       height: 58
     style:
       fill: '#d5d6d7'
+      stroke: '#515152'
+      strokeWidth: 2
+  - id: process_1758855070153
+    name: New Stepe
+    type: process
+    position:
+      x: 692
+      y: 304
+    dimensions:
+      width: 113
+      height: 60
+    style:
+      fill: '#e2e3e4'
       stroke: '#515152'
       strokeWidth: 2
 edges:
@@ -123,7 +136,7 @@ edges:
     to: connector_1758492243168_step_1758498517717
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
   - id: process_1758491813602-process_1758497587395-1758501011747
     name: ""
@@ -132,7 +145,7 @@ edges:
     to: process_1758497587395
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
   - id: process_1758497587395-process_1758497587395_step_1758503316733-1758503316734
     name: ""
@@ -141,7 +154,7 @@ edges:
     to: process_1758497587395_step_1758503316733
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
   - id: process_1758497587395-process_1758497587395_step_1758503351699-1758503351699
     name: ""
@@ -150,7 +163,7 @@ edges:
     to: process_1758497587395_step_1758503351699
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
   - id: process_1758497587395_step_1758503351699-process_1758497587395_step_1758503351699_step_1758503470042-1758503470043
     name: ""
@@ -159,7 +172,7 @@ edges:
     to: process_1758497587395_step_1758503351699_step_1758503470042
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
   - id: process_1758497587395_step_1758503316733-connector_1758492243168-1758503545304
     name: ""
@@ -168,7 +181,7 @@ edges:
     to: connector_1758492243168
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758503642984
     name: ""
@@ -177,7 +190,7 @@ edges:
     to: connector_1758492243168_step_1758498517717_step_1758503642983
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758720555134
     name: ""
@@ -186,7 +199,7 @@ edges:
     to: connector_1758492243168_step_1758498517717_step_1758503642983
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
   - id: connector_1758492243168_step_1758498517717-connector_1758492243168_step_1758498517717_step_1758503642983-1758772843863
     name: ""
@@ -197,7 +210,7 @@ edges:
     to: connector_1758492243168_step_1758498517717_step_1758503642983
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
   - id: connector_1758492243168-connector_1758492243168_step_1758807023731-1758807023734
     name: ""
@@ -206,7 +219,7 @@ edges:
     to: connector_1758492243168_step_1758807023731
     style:
       stroke: '#9c9ea0'
-      strokeWidth: 1
+      strokeWidth: 2
       strokeDasharray: 6,2
 layout:
   direction: top-bottom
@@ -214,4 +227,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-25T20:49:32.791264-05:00
+updated: 2025-09-25T21:53:13.593663-05:00

@@ -1175,7 +1175,7 @@
                 preHtmlEdges.forEach(el => el.remove());
 
                 // Extra safety: remove any stale connection elements anywhere in the document
-                document.querySelectorAll('line.connection-line, polygon.connection-arrowhead, text.connection-label, rect.connection-label-bg').forEach(el => el.remove());
+                document.querySelectorAll('line.connection-line, polygon.connection-arrowhead, text.connection-label, rect.connection-label-bg, .tech-marker, .tech-marker-label').forEach(el => el.remove());
 
                 // Extra safety: remove any connections-layer SVGs that are not within our display container
                 document.querySelectorAll('svg.connections-layer').forEach(el => {
@@ -5296,22 +5296,42 @@
                 return { shape: 'rect', fill: '#7f8c8d', stroke: '#566163', label: (tech || 'N/A').toUpperCase().slice(0, 6) };
             }
 
-            function drawTechMarker(svgGroup, start, next, edge) {
+            function drawTechMarker(svgGroup, pathPoints, edge) {
                 if (!edge || !edge.metadata) return;
                 const tech = edge.metadata.technology;
-                if (!tech) return;
+                if (!tech || !Array.isArray(pathPoints) || pathPoints.length < 2) return;
                 const spec = getTechMarkerSpec(tech);
-                // Direction unit from start->next
-                const dx = next.x - start.x;
-                const dy = next.y - start.y;
-                const len = Math.max(1, Math.hypot(dx, dy));
-                const ux = dx / len, uy = dy / len;
-                // Place marker further after the start and farther away from the line (normal)
-                const along = 24; // px after start
-                const nx = -uy, ny = ux; // normal vector
-                const perp = -14; // offset away from line
-                const cx = start.x + ux * along + nx * perp;
-                const cy = start.y + uy * along + ny * perp;
+                // Compute a midpoint and orientation: straight => segment midpoint; orth => longest segment midpoint
+                let midX, midY, tx, ty, nx, ny;
+                if (pathPoints.length === 2) {
+                    midX = (pathPoints[0].x + pathPoints[1].x) / 2;
+                    midY = (pathPoints[0].y + pathPoints[1].y) / 2;
+                    const dx = pathPoints[1].x - pathPoints[0].x;
+                    const dy = pathPoints[1].y - pathPoints[0].y;
+                    const len = Math.max(1, Math.hypot(dx, dy));
+                    tx = dx / len; ty = dy / len;
+                    nx = -ty; ny = tx;
+                } else {
+                    // Find longest segment
+                    let longest = 0; let idx = 0;
+                    for (let i = 0; i < pathPoints.length - 1; i++) {
+                        const dx = pathPoints[i + 1].x - pathPoints[i].x;
+                        const dy = pathPoints[i + 1].y - pathPoints[i].y;
+                        const l = Math.hypot(dx, dy);
+                        if (l > longest) { longest = l; idx = i; }
+                    }
+                    const p1 = pathPoints[idx], p2 = pathPoints[idx + 1];
+                    midX = (p1.x + p2.x) / 2; midY = (p1.y + p2.y) / 2;
+                    const dx = p2.x - p1.x; const dy = p2.y - p1.y;
+                    const len = Math.max(1, Math.hypot(dx, dy));
+                    tx = dx / len; ty = dy / len; nx = -ty; ny = tx;
+                }
+                // Ensure normal points "below" (downward on screen)
+                if (ny < 0) { nx = -nx; ny = -ny; }
+                // Offset perpendicular only to place below the line; keep centered along
+                const perp = 16; // px below the line
+                const cx = midX + nx * perp;
+                const cy = midY + ny * perp;
                 // Create text first to measure and size marker with padding
                 const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 label.setAttribute('x', String(cx));
@@ -5393,8 +5413,6 @@
                 // Remove need for double-click to open editor
                 svg.appendChild(hit);
                 svg.appendChild(line);
-                // Technology marker near start of line
-                drawTechMarker(svg, { x: pathPoints[0].x, y: pathPoints[0].y }, { x: pathPoints[1].x, y: pathPoints[1].y }, edge);
             } else {
                 // Multi-segment path using polyline or multiple lines
                 for (let i = 0; i < pathPoints.length - 1; i++) {
@@ -5438,12 +5456,11 @@
                     // Remove need for double-click to open editor
                     svg.appendChild(hit);
                     svg.appendChild(line);
-                    // For first visible segment, draw a single marker
-                    if (i === 0) {
-                        drawTechMarker(svg, { x: pathPoints[0].x, y: pathPoints[0].y }, { x: pathPoints[1].x, y: pathPoints[1].y }, edge);
-                    }
                 }
             }
+
+            // Draw a single centered technology marker below the connection
+            try { drawTechMarker(svg, pathPoints, edge); } catch (_) { }
 
 
             // Add arrowhead at the end of the path
