@@ -7,7 +7,7 @@ nodes:
     type: start
     position:
       x: 100
-      y: 108
+      y: 107
     dimensions:
       width: 79
       height: 79
@@ -18,7 +18,7 @@ nodes:
     name: Step 3
     type: process
     position:
-      x: 499
+      x: 490
       y: 255
     dimensions:
       width: 86
@@ -30,7 +30,7 @@ nodes:
     name: Validate
     type: process
     position:
-      x: 280
+      x: 271
       y: 117
     dimensions:
       width: 96
@@ -42,7 +42,7 @@ nodes:
     name: Step
     type: process
     position:
-      x: 502
+      x: 493
       y: 116
     dimensions:
       width: 80
@@ -55,7 +55,7 @@ nodes:
     name: Pass
     type: decision
     position:
-      x: 344
+      x: 335
       y: 252
     dimensions:
       width: 67
@@ -67,7 +67,7 @@ nodes:
     name: Fail
     type: decision
     position:
-      x: 246
+      x: 237
       y: 252
     dimensions:
       width: 66
@@ -79,7 +79,7 @@ nodes:
     name: End
     type: end
     position:
-      x: 239
+      x: 230
       y: 376
     dimensions:
       width: 79
@@ -92,7 +92,7 @@ nodes:
     name: Finish
     type: end
     position:
-      x: 723
+      x: 714
       y: 100
     dimensions:
       width: 92
@@ -104,11 +104,11 @@ nodes:
     name: New Step
     type: subroutine
     position:
-      x: 484
+      x: 475
       y: 410
     dimensions:
-      width: 115
-      height: 60
+      width: 257
+      height: 85
     style:
       fill: '#d5d6d7'
       stroke: '#515152'
@@ -117,8 +117,8 @@ nodes:
     name: New Step
     type: process
     position:
-      x: 719
-      y: 290
+      x: 720
+      y: 293
     dimensions:
       width: 105
       height: 60
@@ -249,4 +249,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-26T08:03:16.781257-05:00
+updated: 2025-09-26T08:07:20.606123-05:00

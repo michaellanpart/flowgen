@@ -1178,7 +1178,7 @@
                 preHtmlEdges.forEach(el => el.remove());
 
                 // Extra safety: remove any stale connection elements anywhere in the document
-                document.querySelectorAll('line.connection-line, polygon.connection-arrowhead, text.connection-label, rect.connection-label-bg, .tech-marker, .tech-marker-label').forEach(el => el.remove());
+                document.querySelectorAll('line.connection-line, polygon.connection-arrowhead, text.connection-label, rect.connection-label-bg, .tech-marker, .tech-marker-label, .combined-connection-label').forEach(el => el.remove());
 
                 // Extra safety: remove any connections-layer SVGs that are not within our display container
                 document.querySelectorAll('svg.connections-layer').forEach(el => {
@@ -1730,7 +1730,7 @@
         // Edge selection helpers
         function clearEdgeSelection() {
             selectedEdgeId = null;
-            document.querySelectorAll('.connection-line.selected, .connection-arrowhead.selected, .connection-label-bg.selected')
+            document.querySelectorAll('.connection-line.selected, .connection-arrowhead.selected, .connection-label-bg.selected, .combined-connection-label.selected')
                 .forEach(el => el.classList.remove('selected'));
         }
 
@@ -1967,7 +1967,7 @@
             // Select all line segments, arrowheads, and label backgrounds
             const display = document.getElementById('flowchartDisplay');
             if (!display) return;
-            display.querySelectorAll('line.connection-line, polygon.connection-arrowhead, rect.connection-label-bg')
+            display.querySelectorAll('line.connection-line, polygon.connection-arrowhead, rect.connection-label-bg, .combined-connection-label')
                 .forEach(el => el.classList.add('selected'));
             showMessage('All connectors selected', 'info');
         }
