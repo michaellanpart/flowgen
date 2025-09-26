@@ -6,8 +6,8 @@ nodes:
     name: Start
     type: start
     position:
-      x: 122
-      y: 105
+      x: 100
+      y: 104.5
     dimensions:
       width: 77
       height: 77
@@ -18,7 +18,7 @@ nodes:
     name: Step 3
     type: process
     position:
-      x: 489
+      x: 467
       y: 251
     dimensions:
       width: 86
@@ -30,7 +30,7 @@ nodes:
     name: Validate
     type: process
     position:
-      x: 271
+      x: 249
       y: 113
     dimensions:
       width: 96
@@ -42,7 +42,7 @@ nodes:
     name: Step
     type: process
     position:
-      x: 492
+      x: 470
       y: 111
     dimensions:
       width: 80
@@ -55,7 +55,7 @@ nodes:
     name: Pass
     type: decision
     position:
-      x: 335
+      x: 313
       y: 248
     dimensions:
       width: 67
@@ -67,7 +67,7 @@ nodes:
     name: Fail
     type: decision
     position:
-      x: 237
+      x: 215
       y: 248
     dimensions:
       width: 66
@@ -79,7 +79,7 @@ nodes:
     name: End
     type: end
     position:
-      x: 230
+      x: 208
       y: 372
     dimensions:
       width: 79
@@ -92,8 +92,8 @@ nodes:
     name: Finish
     type: end
     position:
-      x: 679
-      y: 100
+      x: 657
+      y: 99
     dimensions:
       width: 83
       height: 83
@@ -192,4 +192,4 @@ layout:
     node: 50
     rank: 100
 created: 2025-09-21T16:42:15.522793-05:00
-updated: 2025-09-26T15:06:53.320572-05:00
+updated: 2025-09-26T18:32:30.865408-05:00
