@@ -3380,6 +3380,8 @@
                 return;
             }
 
+
+
             // Find all connected nodes (both incoming and outgoing connections)
             const connectedNodeIds = [];
             currentDiagram.edges.forEach(edge => {
@@ -3405,6 +3407,8 @@
                     const width = parseInt(nodeEl.style.width) || 120;
                     const height = parseInt(nodeEl.style.height) || 60;
 
+
+
                     connectedPositions.push({
                         centerX: x + width / 2,
                         centerY: y + height / 2,
@@ -3418,70 +3422,68 @@
                 return;
             }
 
-            // Get current selected node position
+            // Get current selected node position and connection points
             const currentX = parseInt(selectedNodeElement.style.left) || 0;
             const currentY = parseInt(selectedNodeElement.style.top) || 0;
             const selectedWidth = parseInt(selectedNodeElement.style.width) || 120;
             const selectedHeight = parseInt(selectedNodeElement.style.height) || 60;
-            const currentCenterX = currentX + selectedWidth / 2;
-            const currentCenterY = currentY + selectedHeight / 2;
 
-            // Determine alignment direction based on relative positions
+            // Calculate connection points for selected node (center of each edge)
+            const selectedConnectionPoints = {
+                top: { x: currentX + selectedWidth / 2, y: currentY },
+                right: { x: currentX + selectedWidth, y: currentY + selectedHeight / 2 },
+                bottom: { x: currentX + selectedWidth / 2, y: currentY + selectedHeight },
+                left: { x: currentX, y: currentY + selectedHeight / 2 }
+            };
+
             let newX = currentX;
             let newY = currentY;
 
             if (connectedPositions.length === 1) {
-                // Single connection: align either horizontally or vertically with mandatory spacing
                 const connected = connectedPositions[0];
                 const connectedCenterX = connected.centerX;
                 const connectedCenterY = connected.centerY;
 
-                // Determine if we should align horizontally or vertically
-                const deltaX = Math.abs(currentCenterX - connectedCenterX);
-                const deltaY = Math.abs(currentCenterY - connectedCenterY);
+                // Calculate current selected node center
+                const selectedCenterX = currentX + selectedWidth / 2;
+                const selectedCenterY = currentY + selectedHeight / 2;
 
-                // Calculate mandatory separation distance
-                const minSeparationX = (selectedWidth / 2) + (connected.width / 2) + 40; // 40px padding
-                const minSeparationY = (selectedHeight / 2) + (connected.height / 2) + 40; // 40px padding
+                // Determine if nodes are more horizontally or vertically separated
+                const deltaX = Math.abs(selectedCenterX - connectedCenterX);
+                const deltaY = Math.abs(selectedCenterY - connectedCenterY);
 
                 if (deltaX > deltaY) {
-                    // Align vertically (same Y coordinate) but ALWAYS maintain horizontal separation
+                    // Nodes are side by side - align for horizontal connection
+                    // Align the Y coordinates of connection points (middle of each node)
                     newY = connectedCenterY - selectedHeight / 2;
-                    
-                    // ALWAYS maintain minimum horizontal separation
-                    if (currentCenterX < connectedCenterX) {
-                        newX = connectedCenterX - minSeparationX - selectedWidth / 2;
-                    } else {
-                        newX = connectedCenterX + minSeparationX - selectedWidth / 2;
-                    }
+                    console.log('Horizontal connection - aligning Y connection points');
                 } else {
-                    // Align horizontally (same X coordinate) but ALWAYS maintain vertical separation
+                    // Nodes are above/below - align for vertical connection
+                    // Align the X coordinates of connection points (middle of each node)
                     newX = connectedCenterX - selectedWidth / 2;
-                    
-                    // ALWAYS maintain minimum vertical separation  
-                    if (currentCenterY < connectedCenterY) {
-                        newY = connectedCenterY - minSeparationY - selectedHeight / 2;
-                    } else {
-                        newY = connectedCenterY + minSeparationY - selectedHeight / 2;
-                    }
+                    console.log('Vertical connection - aligning X connection points');
                 }
             } else {
-                // Multiple connections: align to average X or Y coordinate
+                // Multiple connections: align to average connection point
                 const avgCenterX = connectedPositions.reduce((sum, pos) => sum + pos.centerX, 0) / connectedPositions.length;
                 const avgCenterY = connectedPositions.reduce((sum, pos) => sum + pos.centerY, 0) / connectedPositions.length;
 
                 // Choose alignment based on which would move the node less
+                const currentCenterX = currentX + selectedWidth / 2;
+                const currentCenterY = currentY + selectedHeight / 2;
                 const deltaX = Math.abs(currentCenterX - avgCenterX);
                 const deltaY = Math.abs(currentCenterY - avgCenterY);
 
                 if (deltaX < deltaY) {
-                    // Align vertically (same Y as average)
+                    // Align vertically - match Y connection point
                     newY = avgCenterY - selectedHeight / 2;
                 } else {
-                    // Align horizontally (same X as average)
+                    // Align horizontally - match X connection point  
                     newX = avgCenterX - selectedWidth / 2;
                 }
-            }            // Update the selected node's position
+            }
+
+            // Update the selected node's position
             selectedNodeElement.style.left = newX + 'px';
             selectedNodeElement.style.top = newY + 'px';
 
