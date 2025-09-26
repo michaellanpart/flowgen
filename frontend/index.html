@@ -3245,6 +3245,14 @@
             } else if (cmd && (e.key === 'n' || e.key === 'N')) {
                 e.preventDefault();
                 openNewDiagramModal();
+            } else if (cmd && (e.key === 'z' || e.key === 'Z')) {
+                e.preventDefault();
+                // Auto-resize selected node to fit text
+                if (selectedNodeElement) {
+                    autoResizeCurrentNode();
+                } else {
+                    showMessage('Select a node first to auto-resize', 'info');
+                }
             }
         });
 
